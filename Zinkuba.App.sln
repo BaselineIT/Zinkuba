@@ -1,0 +1,58 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "S22.Imap", "S22.Imap\S22.Imap.csproj", "{369C32A5-E099-4BD5-BBBF-51713947CA99}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MailModule", "MailModule\MailModule.csproj", "{C2E2FA80-84EE-4083-BBF9-15B045584993}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zinkuba.App", "Zinkuba.App\Zinkuba.App.csproj", "{6C19F8F7-6052-4923-B493-6404BE527F8F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RendezzUI", "RendezzUI\RendezzUI.csproj", "{16AC9B49-EFA3-4117-8287-BCE4E8520EF8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartThreadPool", "SmartThreadPool\SmartThreadPool.csproj", "{74D4C33F-7CC8-4B2A-A7DF-D8B6E63B6EBD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Publish|Any CPU = Publish|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{369C32A5-E099-4BD5-BBBF-51713947CA99}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{369C32A5-E099-4BD5-BBBF-51713947CA99}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{369C32A5-E099-4BD5-BBBF-51713947CA99}.Publish|Any CPU.ActiveCfg = Release|Any CPU
+		{369C32A5-E099-4BD5-BBBF-51713947CA99}.Publish|Any CPU.Build.0 = Release|Any CPU
+		{369C32A5-E099-4BD5-BBBF-51713947CA99}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{369C32A5-E099-4BD5-BBBF-51713947CA99}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C2E2FA80-84EE-4083-BBF9-15B045584993}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C2E2FA80-84EE-4083-BBF9-15B045584993}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C2E2FA80-84EE-4083-BBF9-15B045584993}.Publish|Any CPU.ActiveCfg = Release|Any CPU
+		{C2E2FA80-84EE-4083-BBF9-15B045584993}.Publish|Any CPU.Build.0 = Release|Any CPU
+		{C2E2FA80-84EE-4083-BBF9-15B045584993}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C2E2FA80-84EE-4083-BBF9-15B045584993}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6C19F8F7-6052-4923-B493-6404BE527F8F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C19F8F7-6052-4923-B493-6404BE527F8F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C19F8F7-6052-4923-B493-6404BE527F8F}.Publish|Any CPU.ActiveCfg = Release|Any CPU
+		{6C19F8F7-6052-4923-B493-6404BE527F8F}.Publish|Any CPU.Build.0 = Release|Any CPU
+		{6C19F8F7-6052-4923-B493-6404BE527F8F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C19F8F7-6052-4923-B493-6404BE527F8F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{16AC9B49-EFA3-4117-8287-BCE4E8520EF8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{16AC9B49-EFA3-4117-8287-BCE4E8520EF8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{16AC9B49-EFA3-4117-8287-BCE4E8520EF8}.Publish|Any CPU.ActiveCfg = Release|Any CPU
+		{16AC9B49-EFA3-4117-8287-BCE4E8520EF8}.Publish|Any CPU.Build.0 = Release|Any CPU
+		{16AC9B49-EFA3-4117-8287-BCE4E8520EF8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{16AC9B49-EFA3-4117-8287-BCE4E8520EF8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{74D4C33F-7CC8-4B2A-A7DF-D8B6E63B6EBD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{74D4C33F-7CC8-4B2A-A7DF-D8B6E63B6EBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{74D4C33F-7CC8-4B2A-A7DF-D8B6E63B6EBD}.Publish|Any CPU.ActiveCfg = Publish|Any CPU
+		{74D4C33F-7CC8-4B2A-A7DF-D8B6E63B6EBD}.Publish|Any CPU.Build.0 = Publish|Any CPU
+		{74D4C33F-7CC8-4B2A-A7DF-D8B6E63B6EBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{74D4C33F-7CC8-4B2A-A7DF-D8B6E63B6EBD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
+EndGlobal

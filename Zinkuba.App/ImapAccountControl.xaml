@@ -1,0 +1,23 @@
+﻿<UserControl x:Class="Zinkuba.App.ImapAccountControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+            >
+    <Grid Margin="0,5,0,0">
+        <GroupBox Header="Imap Source">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" >
+                    <Button Content=" Remove " Click="RemoveItem"/>
+                    <Label Content="Server" HorizontalAlignment="Left" Margin="5,0,0,0" VerticalAlignment="Center" Width="52"/>
+                    <TextBox x:Name="Server" HorizontalAlignment="Left" Height="23" Margin="0" TextWrapping="NoWrap" Text="{Binding Server}" VerticalAlignment="Center" Width="217"/>
+                    <CheckBox x:Name="SSL" Content="SSL" IsChecked="{Binding SSL}" HorizontalAlignment="Left" Margin="5,0,0,0" VerticalAlignment="Center" />
+                    <CheckBox x:Name="UseGmailCheckBox" Content="Gmail?" HorizontalAlignment="Left" Margin="5,0,0,0" VerticalAlignment="Center" Checked="UseGmailCheckBox_Checked" />
+                    <Button Content="Add Account" Margin="20,0,0,0" Click="AddMailboxClick"/>
+                </StackPanel>
+                <ItemsControl Margin="5,0,0,0" ItemsSource="{Binding Path=Mailboxes}" />
+            </StackPanel>
+        </GroupBox>
+    </Grid>
+</UserControl>

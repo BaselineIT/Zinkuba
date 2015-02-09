@@ -1,0 +1,15 @@
+﻿<UserControl x:Class="Zinkuba.App.PstDestinationControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             >
+    <Grid Margin="0,10,0,0">
+        <StackPanel Orientation="Horizontal">
+            <Label Content="Save Folder" Margin="0" />
+            <TextBox x:Name="SaveFolder" Height="23" TextWrapping="Wrap" Width="407"/>
+        </StackPanel>
+    </Grid>
+
+</UserControl>

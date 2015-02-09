@@ -1,0 +1,109 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{C2E2FA80-84EE-4083-BBF9-15B045584993}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Zinkuba.MailModule</RootNamespace>
+    <AssemblyName>Zinkuba.MailModule</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="log4net">
+      <HintPath>..\OutlookTester\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Exchange.WebServices">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Microsoft\Exchange\Web Services\2.0\Microsoft.Exchange.WebServices.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Office.Interop.Outlook, Version=14.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c, processorArchitecture=MSIL">
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="API\IMessageProcessor.cs" />
+    <Compile Include="API\IMessageReader.cs" />
+    <Compile Include="API\IMessageSource.cs" />
+    <Compile Include="API\IMessageWriter.cs" />
+    <Compile Include="FolderMapping.cs" />
+    <Compile Include="ImapMailbox.cs" />
+    <Compile Include="ImportState.cs" />
+    <Compile Include="MessageConverter.cs" />
+    <Compile Include="MessageDescriptor\EmlMessageDescriptor.cs" />
+    <Compile Include="MessageDescriptor\ImapMessageDescriptor.cs" />
+    <Compile Include="MessageDescriptor\BaseMessageDescriptor.cs" />
+    <Compile Include="MessageDescriptor\MsgDescriptor.cs" />
+    <Compile Include="MessageDescriptor\RawMessageDescriptor.cs" />
+    <Compile Include="MessagePipeline.cs" />
+    <Compile Include="MessageProcessor\BaseMessageProcessor.cs" />
+    <Compile Include="MessageProcessor\ExchangeExporter.cs" />
+    <Compile Include="MessageProcessor\ExchangeHelper.cs" />
+    <Compile Include="MessageProcessor\ExchangeTarget.cs" />
+    <Compile Include="MessageProcessor\IMessageDestination.cs" />
+    <Compile Include="MessageProcessor\MboxExporter.cs" />
+    <Compile Include="MessageProcessor\ImapExporter.cs" />
+    <Compile Include="MessageProcessor\MessageProcessorException.cs" />
+    <Compile Include="MessageProcessor\PstTarget.cs" />
+    <Compile Include="MessageProcessor\RawToMsgProcessor.cs" />
+    <Compile Include="MessageProcessState.cs" />
+    <Compile Include="MessageStats.cs" />
+    <Compile Include="PCQueue.cs" />
+    <Compile Include="PCState.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\S22.Imap\S22.Imap.csproj">
+      <Project>{369c32a5-e099-4bd5-bbbf-51713947ca99}</Project>
+      <Name>S22.Imap</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SmartThreadPool\SmartThreadPool.csproj">
+      <Project>{74d4c33f-7cc8-4b2a-a7df-d8b6e63b6ebd}</Project>
+      <Name>SmartThreadPool</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="mrmapi_64.exe" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="mrmapi_32.exe" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
