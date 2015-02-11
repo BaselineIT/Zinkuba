@@ -12,10 +12,6 @@
                     <Button Content=" Remove " Click="RemoveItem"/>
                     <Label Content="Server" HorizontalAlignment="Left" Margin="5,0,0,0" VerticalAlignment="Center" Width="52"/>
                     <TextBox Text="{Binding Server}" x:Name="Server" HorizontalAlignment="Left" Height="23" Margin="0" TextWrapping="NoWrap" VerticalAlignment="Center" Width="217"/>
-                    <Label Content="From"/>
-                    <DatePicker x:Name="StartDate" Width="100" SelectedDate="{Binding Path=StartDate}" />
-                    <Label Content="To"/>
-                    <DatePicker x:Name="EndDate" Width="100" SelectedDate="{Binding Path=EndDate}" />
                     <Button Content="Add Account" Margin="10,0,0,0" Click="AddMailboxClick"/>
                 </StackPanel>
                 <ItemsControl Margin="5,0,0,0" ItemsSource="{Binding Path=Mailboxes}" />

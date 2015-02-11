@@ -19,7 +19,11 @@
                             <ComboBoxItem>Exchange</ComboBoxItem>
                         </ComboBox>
                         <StackPanel Margin="0,5,0,0" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Grid.Row="0">
-                            <CheckBox x:Name="TestOnlyCheckBox" Content="Test(20)?" HorizontalAlignment="Left"  VerticalAlignment="Center" />
+                            <Label Content="From"/>
+                            <DatePicker x:Name="StartDate" Width="100" SelectedDate="{Binding Path=StartDate}" />
+                            <Label Content="To"/>
+                            <DatePicker x:Name="EndDate" Width="100" SelectedDate="{Binding Path=EndDate}" />
+                            <CheckBox x:Name="TestOnlyCheckBox" Content="Test(20)?" HorizontalAlignment="Left"  VerticalAlignment="Center" Margin="10,0,0,0"/>
                             <Button Content="Start Exporter" HorizontalAlignment="Right" Margin="10,0,0,0" Width="86"  Click="StartExport"/>
                         </StackPanel>
                     </DockPanel>

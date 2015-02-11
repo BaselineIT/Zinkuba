@@ -8,6 +8,8 @@ namespace Zinkuba.App.MailAccount
     {
         event EventHandler<IMailbox> AddedMailbox;
         event EventHandler<IMailbox> RemovedMailbox;
+        DateTime StartDate { get; set; }
+        DateTime EndDate { get; set; }
 
         ReturnTypeCollection<IMailbox> Mailboxes { get; }
     }

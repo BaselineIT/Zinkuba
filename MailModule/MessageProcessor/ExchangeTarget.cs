@@ -94,8 +94,25 @@ namespace Zinkuba.MailModule.MessageProcessor
                 var start = Environment.TickCount;
                 try
                 {
-                    ImportIntoEWS(msg);
-                    Logger.Debug("Imported message " + msg + " into " + _username + "@" + _hostname + " [" + (Environment.TickCount-start) + "ms]");
+                    try
+                    {
+                        ImportIntoEWS(msg);
+                        Logger.Debug("Imported message " + msg + " into " + _username + "@" + _hostname + " [" +
+                                     (Environment.TickCount - start) + "ms]");
+                    }
+                    catch (ServiceLocalException e)
+                    {
+                        if (e.Message.Equals("The type of the object in the store (MeetingRequest) does not match that of the local object (Message)."))
+                        {
+                            // this is an error we can ignore, it just means we sent it as an email message, but its actually a meeting request, exchange imports it anyway
+                            Logger.Debug("Imported meeting request " + msg + " into " + _username + "@" + _hostname + " [" +
+                                         (Environment.TickCount - start) + "ms]");
+                        }
+                        else
+                        {
+                            throw e;
+                        }
+                    }
                     SucceededMessageCount++;
                 }
                 catch (Exception e)
@@ -123,6 +140,9 @@ namespace Zinkuba.MailModule.MessageProcessor
 
             // This is required to be set one way or another, otherwise the message is marked as new (not delivered)
             item.IsRead = !msg.Flags.Contains(MessageFlags.Unread);
+            // Set the defaults to no receipts, to be corrected later by flags.
+            item.IsReadReceiptRequested = false;
+            item.IsDeliveryReceiptRequested = false;
 
             foreach (var messageFlag in msg.Flags)
             {
@@ -147,12 +167,17 @@ namespace Zinkuba.MailModule.MessageProcessor
                             }
                         case MessageFlags.ReadReceiptRequested:
                             {
-                                item.IsReadReceiptRequested = true;
+                                // If the item is read already, we don't set a read receipt request as it will send one on save.
+                                if (!item.IsRead)
+                                {
+                                    item.IsReadReceiptRequested = true;
+                                }
                                 break;
                             }
                         case MessageFlags.DeliveryReceiptRequested:
                             {
-                                item.IsDeliveryReceiptRequested = true;
+                                // this causes spam
+                                //item.IsDeliveryReceiptRequested = true;
                                 break;
                             }
                     }

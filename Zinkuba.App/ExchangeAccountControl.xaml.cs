@@ -21,30 +21,30 @@ namespace Zinkuba.App
         private static readonly ILog Logger = LogManager.GetLogger(typeof (ExchangeAccountControl));
         public Action<IMailAccount> RemoveAccountFunction;
         private readonly ExchangeAccountDataContext _dataContext;
-        public readonly ExchangeAccount Account;
+        private readonly ExchangeAccount _account;
+        public IMailAccount Account { get { return _account; } }
 
         public ExchangeAccountControl(ExchangeAccount account)
         {
             InitializeComponent();
-            Account = account;
-            _dataContext = new ExchangeAccountDataContext(Account, RemoveMailboxFunction);
+            _account = account;
+            _dataContext = new ExchangeAccountDataContext(_account, RemoveMailboxFunction);
             DataContext = _dataContext;
-            _dataContext.StartDate = DateTime.Now.AddYears(-10);
-            _dataContext.EndDate = DateTime.Now.Date;
+
         }
 
         private void RemoveItem(object sender, RoutedEventArgs e)
         {
             if (RemoveAccountFunction != null)
             {
-                RemoveAccountFunction(Account);
+                RemoveAccountFunction(_account);
             }
         }
 
         private void AddMailboxClick(object sender, RoutedEventArgs e)
         {
-            Account.Mailboxes.Add<AuthenticatedMailbox>(new AuthenticatedMailbox(Account));
-            Logger.Debug("Added a mailbox to account " + Account);
+            _account.Mailboxes.Add<AuthenticatedMailbox>(new AuthenticatedMailbox(_account));
+            Logger.Debug("Added a mailbox to account " + _account);
         }
 
         private void RemoveMailboxFunction(IMailbox o)
@@ -52,9 +52,9 @@ namespace Zinkuba.App
             var item = o as AuthenticatedMailbox;
             if (item != null)
             {
-                if (Account.Mailboxes.Contains<AuthenticatedMailbox>(item))
+                if (_account.Mailboxes.Contains<AuthenticatedMailbox>(item))
                 {
-                    Account.Mailboxes.Remove<AuthenticatedMailbox>(item);
+                    _account.Mailboxes.Remove<AuthenticatedMailbox>(item);
                 }
             }
         }
@@ -72,38 +72,15 @@ namespace Zinkuba.App
             return pending;
         }
 
-        public IMailAccount MirrorSource { get { return Account; } }
+        public IMailAccount MirrorSource { get { return _account; } }
     }
 
 
     public class ExchangeAccountDataContext : INotifyPropertyChanged
     {
         private readonly ExchangeAccount _account;
-        private DateTime _startDate;
-        private DateTime _endDate;
         public AuthenticatedMailboxList Mailboxes { get; set; }
 
-        public DateTime StartDate
-        {
-            get { return _account.StartDate; }
-            set
-            {
-                if (value.Equals(_account.StartDate)) return;
-                _account.StartDate = value;
-                OnPropertyChanged("StartDate");
-            }
-        }
-
-        public DateTime EndDate
-        {
-            get { return _account.EndDate; }
-            set
-            {
-                if (value.Equals(_account.EndDate)) return;
-                _account.EndDate = value;
-                OnPropertyChanged("EndDate");
-            }
-        }
 
         public String Server
         {

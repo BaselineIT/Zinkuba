@@ -20,14 +20,15 @@ namespace Zinkuba.App
         private static readonly ILog Logger = LogManager.GetLogger(typeof (ImapAccountControl));
         private ImapAccountDataContext _dataContext;
         public Action<IMailAccount> RemoveAccountFunction;
-        public IMailAccount MirrorSource { get { return Account; } }
-        public readonly ImapAccount Account;
+        public IMailAccount MirrorSource { get { return _account; } }
+        private readonly ImapAccount _account;
+        public IMailAccount Account { get { return _account; }}
 
         public ImapAccountControl(ImapAccount account)
         {
             InitializeComponent();
-            Account = account;
-            _dataContext = new ImapAccountDataContext(Account, RemoveImapMailboxFunction);
+            _account = account;
+            _dataContext = new ImapAccountDataContext(_account, RemoveImapMailboxFunction);
             DataContext = _dataContext;
         }
 
@@ -42,8 +43,8 @@ namespace Zinkuba.App
 
         private void AddMailboxClick(object sender, RoutedEventArgs e)
         {
-            Account.Mailboxes.Add<AuthenticatedMailbox>(new AuthenticatedMailbox(Account));
-            Logger.Debug("Added a mailbox to account " + Account);
+            _account.Mailboxes.Add<AuthenticatedMailbox>(new AuthenticatedMailbox(_account));
+            Logger.Debug("Added a mailbox to account " + _account);
             //_dataContext.ImapMailboxes.Add(new ImapMailbox(this) { RemoveImapMailboxFunction = RemoveImapMailboxFunction});
         }
 
@@ -52,9 +53,9 @@ namespace Zinkuba.App
             var item = o as AuthenticatedMailbox;
             if (item != null)
             {
-                if (Account.Mailboxes.Contains<AuthenticatedMailbox>(item))
+                if (_account.Mailboxes.Contains<AuthenticatedMailbox>(item))
                 {
-                    Account.Mailboxes.Remove<AuthenticatedMailbox>(item);
+                    _account.Mailboxes.Remove<AuthenticatedMailbox>(item);
                 }
             }
         }
@@ -63,7 +64,7 @@ namespace Zinkuba.App
         {
             if (RemoveAccountFunction != null)
             {
-                RemoveAccountFunction(Account);
+                RemoveAccountFunction(_account);
             }
         }
 

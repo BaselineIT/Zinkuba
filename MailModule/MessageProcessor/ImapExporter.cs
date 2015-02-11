@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Threading;
 using log4net;
+using Microsoft.Office.Interop.Outlook;
 using S22.Imap;
 using Zinkuba.MailModule.API;
 using Zinkuba.MailModule.MessageDescriptor;
@@ -19,10 +20,13 @@ namespace Zinkuba.MailModule.MessageProcessor
         private static readonly ILog Logger = LogManager.GetLogger(typeof (ImapExporter));
         private ImapClient _imapClient;
         private readonly string _server;
+        private readonly DateTime? _startDate;
+        private readonly DateTime? _endDate;
         private readonly bool _useSsl;
         private readonly string _username;
         private readonly string _password;
         public MailProvider Provider = MailProvider.DefaultImap;
+        private SearchCondition _searchCondition = null;
         private Thread _imapThread;
 
         public int TotalMessages
@@ -35,10 +39,12 @@ namespace Zinkuba.MailModule.MessageProcessor
         private int _totalMessages;
         private bool _testOnly;
 
-        public ImapExporter(String username, String password, String server, bool useSSL)
+        public ImapExporter(String username, String password, String server, DateTime startDate, DateTime endDate, bool useSSL)
         {
             _password = password;
             _server = server;
+            _startDate = startDate;
+            _endDate = endDate;
             _username = username;
             _useSsl = useSSL;
             Name = username;
@@ -60,6 +66,21 @@ namespace Zinkuba.MailModule.MessageProcessor
                     delegate { return true; });
                 Logger.Debug("Logged into " + _server + " as " + _username);
                 var folders = _imapClient.ListMailboxes();
+                if (_startDate != null || _endDate != null)
+                {
+                    // ok we need to do a search
+                    if (_startDate != null)
+                    {
+                        _searchCondition = SearchCondition.Since((DateTime) _startDate);
+                    }
+                    if (_endDate != null)
+                    {
+                        _searchCondition = _searchCondition == null
+                            ? SearchCondition.Before((DateTime) _endDate)
+                            : _searchCondition.And(SearchCondition.Before((DateTime) _endDate));
+                    }
+                    Logger.Debug("Only getting messages " + _searchCondition);
+                }
                 foreach (var folderPath in folders)
                 {
                     var destinationFolder = FolderMapping.ApplyMappings(folderPath, Provider);
@@ -70,11 +91,31 @@ namespace Zinkuba.MailModule.MessageProcessor
                             var folder = _imapClient.GetMailboxInfo(folderPath);
                             if (folder.Messages == 0)
                             {
-                                Logger.Debug("Skipping folder " + folderPath + ", no messages.");
+                                Logger.Debug("Skipping folder " + folderPath + ", no messages at all.");
                                 continue;
                             }
-                            _mailBoxes.Add(new ImapMailbox() {MappedDestination = destinationFolder, Mailbox = folder});
-                            TotalMessages += !_testOnly ? folder.Messages : (folder.Messages > 20 ? 20 : folder.Messages);
+                            int messageCount = 0;
+                            if (_searchCondition != null)
+                            {
+                                var uids = _imapClient.Search(_searchCondition, folderPath);
+                                messageCount = uids.Count();
+                            }
+                            else
+                            {
+                                messageCount = folder.Messages;
+                            }
+                            if (messageCount == 0)
+                            {
+                                Logger.Debug("Skipping folder " + folderPath + ", no messages within criteria.");
+                                continue;
+                            }
+                            _mailBoxes.Add(new ImapMailbox()
+                            {
+                                MappedDestination = destinationFolder,
+                                Mailbox = folder
+                            });
+                            TotalMessages += !_testOnly ? messageCount : (messageCount > 20 ? 20 : messageCount);
+                            Logger.Debug("Will process " + folderPath + " " + messageCount + " messages, " + TotalMessages + " messages total so far.");
                         }
                         catch (Exception ex)
                         {
@@ -139,7 +180,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                     var destinationFolder = mailbox.MappedDestination;
                     try
                     {
-                        var uids = _imapClient.Search(SearchCondition.All(), folderPath);
+                        var uids = _imapClient.Search(_searchCondition ?? SearchCondition.All(), folderPath);
                         Logger.Info("Processing folder Name=" + folderPath + " Destination=" + destinationFolder +
                                     ", Count=" + folder.Messages + ", Unread=" + folder.Unread);
                         var count = folder.Messages;

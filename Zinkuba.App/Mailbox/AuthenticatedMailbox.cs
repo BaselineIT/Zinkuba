@@ -36,7 +36,7 @@ namespace Zinkuba.App.Mailbox
             if(_account is ExchangeAccount)
                 return new ExchangeExporter(Username,Password,_account.Server,_account.StartDate,_account.EndDate.AddDays(1));
             if (_account is ImapAccount)
-                return new ImapExporter(Username,Password,_account.Server,((ImapAccount)_account).UseSsl);
+                return new ImapExporter(Username, Password, _account.Server, _account.StartDate, _account.EndDate.AddDays(1), ((ImapAccount)_account).UseSsl);
             throw new Exception("Unknown Account");
         }
 

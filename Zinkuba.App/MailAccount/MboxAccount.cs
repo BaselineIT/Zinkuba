@@ -41,6 +41,8 @@ namespace Zinkuba.App.MailAccount
 
         public event EventHandler<IMailbox> AddedMailbox;
         public event EventHandler<IMailbox> RemovedMailbox;
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
         public ReturnTypeCollection<IMailbox> Mailboxes { get; private set; }
 
         protected virtual void OnRemovedMailbox(IMailbox e)

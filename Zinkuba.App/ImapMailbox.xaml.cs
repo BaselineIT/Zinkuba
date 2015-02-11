@@ -102,7 +102,7 @@ namespace Zinkuba.App
 
         public IMessageSource GetSource()
         {
-            return new ImapExporter(UsernameField.Text, PasswordField.Password, _account.Server.Text,
+            return new ImapExporter(UsernameField.Text, PasswordField.Password, _account.Server.Text, _account.Account.StartDate, _account.Account.EndDate,
                 _account.SSL.IsChecked == true)
             {
                 Provider = _account.UseGmailCheckBox.IsChecked == true ? MailProvider.GmailImap : MailProvider.DefaultImap,

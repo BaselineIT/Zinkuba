@@ -58,6 +58,8 @@ namespace Zinkuba.App
             DataContext = _dataContext;
             _removedMailboxes = new List<string>();
             TargetComboBox.SelectedIndex = 0;
+            _dataContext.StartDate = DateTime.Now.AddYears(-10);
+            _dataContext.EndDate = DateTime.Now.Date;
         }
 
         private void StartExport(object sender, RoutedEventArgs e)
@@ -71,6 +73,8 @@ namespace Zinkuba.App
             {
                 foreach (var mailSource in _dataContext.MailSources)
                 {
+                    mailSource.Account.StartDate = _dataContext.StartDate;
+                    mailSource.Account.EndDate = _dataContext.EndDate;
                     if (mailSource is ImapAccountControl)
                     {
                         Logger.Debug("Processing Imap account " + mailSource);
@@ -317,6 +321,11 @@ namespace Zinkuba.App
     public class ZinkubaDataContext : INotifyPropertyChanged
     {
         public MailSourceList MailSources { get; set; }
+
+        public DateTime StartDate { get; set; }
+
+        public DateTime EndDate { get; set; }
+
         //public ObservableCollection<UserControl> MailSources { get; set; }
 
         public ZinkubaDataContext(ObservableCollection<IMailAccount> sources, Action<IMailAccount> removeMailAccountFunction)

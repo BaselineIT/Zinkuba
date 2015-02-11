@@ -16,7 +16,7 @@ namespace Zinkuba.App
     /// </summary>
     public partial class MboxAccountControl : UserControl, IMailAccountControl
     {
-        public MboxAccount Account { get; set; }
+        public IMailAccount Account { get; private set; }
         public MBoxAccountDataContext _dataContext;
         public Action<IMailAccount> RemoveAccountFunction;
 
