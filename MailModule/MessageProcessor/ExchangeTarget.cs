@@ -92,6 +92,7 @@ namespace Zinkuba.MailModule.MessageProcessor
             pool.QueueWorkItem(() =>
             {
                 var secondAttempt = false;
+                var completed = false;
                 do
                 {
                     var start = Environment.TickCount;
@@ -139,6 +140,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                                 throw e;
                             }
                         }
+                        completed = true;
                     }
                     catch (Exception e)
                     {
@@ -164,7 +166,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                             secondAttempt = true;
                         }
                     }
-                } while (secondAttempt);
+                } while (secondAttempt && !completed);
                 ProcessedMessageCount++;
             });
             return importState;
