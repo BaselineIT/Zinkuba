@@ -35,7 +35,7 @@ namespace Zinkuba.MailModule.MessageProcessor
             _hostname = hostname;
             _username = username;
             _password = password;
-            pool = new SmartThreadPool() {MaxThreads = 5};
+            pool = new SmartThreadPool() { MaxThreads = 5 };
         }
 
         public void Process(RawMessageDescriptor message)
@@ -91,39 +91,81 @@ namespace Zinkuba.MailModule.MessageProcessor
         {
             pool.QueueWorkItem(() =>
             {
-                var start = Environment.TickCount;
-                try
+                var secondAttempt = false;
+                do
                 {
+                    var start = Environment.TickCount;
                     try
                     {
-                        ImportIntoEWS(msg);
-                        Logger.Debug("Imported message " + msg + " into " + _username + "@" + _hostname + " [" +
-                                     (Environment.TickCount - start) + "ms]");
-                    }
-                    catch (ServiceLocalException e)
-                    {
-                        if (e.Message.Equals("The type of the object in the store (MeetingRequest) does not match that of the local object (Message)."))
+                        try
                         {
-                            // this is an error we can ignore, it just means we sent it as an email message, but its actually a meeting request, exchange imports it anyway
-                            Logger.Debug("Imported meeting request " + msg + " into " + _username + "@" + _hostname + " [" +
+                            ImportIntoEWS(msg);
+                            Logger.Debug("Imported message " + msg + " into " + _username + "@" + _hostname + " [" +
                                          (Environment.TickCount - start) + "ms]");
+                            SucceededMessageCount++;
+                        }
+                        catch (ServiceLocalException e)
+                        {
+                            if (
+                                Regex.Match(e.Message,
+                                    @"The type of the object in the store \(\w+\) does not match that of the local object \(\w+\).")
+                                    .Success)
+                            {
+                                // this is an error we can ignore, it just means we sent it as an email message, but its actually a meeting request/response, exchange imports it anyway
+                                Logger.Debug("Imported meeting request/response " + msg + " into " + _username + "@" +
+                                             _hostname +
+                                             " [" +
+                                             (Environment.TickCount - start) + "ms]");
+                                SucceededMessageCount++;
+                            }
+                            else
+                            {
+                                throw e;
+                            }
+                        }
+                        catch (ServiceResponseException e)
+                        {
+                            if (e.Message.Equals("Operation would change object type, which is not permitted."))
+                            {
+                                // This error is caused by trying to import a message which is a bounce, nothing we can do, mark as ignored
+                                var match = Regex.Match(msg.RawMessage, "^Subject:(.*)");
+                                Logger.Warn("Ignored bounce message " + msg + " [" +
+                                            (match.Success ? match.Groups[0].ToString() : "") + "] for " + _username +
+                                            "@" + _hostname + " [" + (Environment.TickCount - start) + "ms]");
+                                IgnoredMessageCount++;
+                            }
+                            else
+                            {
+                                throw e;
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        if (secondAttempt)
+                        {
+                            var match = Regex.Match(msg.RawMessage, "^Subject:(.*)");
+                            Logger.Error(
+                                "Failed to import message " + msg + " [" +
+                                (match.Success ? match.Groups[0].ToString() : "") +
+                                "] into " + _username + "@" + _hostname + " [" + (Environment.TickCount - start) + "ms]" +
+                                " : " + e.Message, e);
+                            FailedMessageCount++;
+                            secondAttempt = false;
                         }
                         else
                         {
-                            throw e;
+                            var match = Regex.Match(msg.RawMessage, "^Subject:(.*)");
+                            Logger.Warn(
+                                "Failed on try 1 of 2 to import message " + msg + " [" +
+                                (match.Success ? match.Groups[0].ToString() : "") +
+                                "] into " + _username + "@" + _hostname + " [" + (Environment.TickCount - start) + "ms]" +
+                                " : " + e.Message, e);
+                            secondAttempt = true;
                         }
                     }
-                    SucceededMessageCount++;
-                }
-                catch (Exception e)
-                {
-                    Logger.Error("Failed to import message " + msg + " into " + _username + "@" + _hostname + " [" + (Environment.TickCount-start) + "ms]" + " : " + e.Message,e);
-                    FailedMessageCount++;
-                }
-                finally
-                {
-                    ProcessedMessageCount++;
-                }
+                } while (secondAttempt);
+                ProcessedMessageCount++;
             });
             return importState;
         }
@@ -134,6 +176,7 @@ namespace Zinkuba.MailModule.MessageProcessor
             {
                 MimeContent = new MimeContent("UTF-8", Encoding.UTF8.GetBytes(msg.RawMessage))
             };
+
             String folder = msg.DestinationFolder;
 
             //Logger.Debug("Importing " + folder + @"\" + item.Subject + " (" + String.Join(", ", msg.Flags) + ") [" + String.Join(", ", msg.Categories) + "]");
@@ -230,7 +273,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                     }
                     Logger.Debug("Folder " + destinationFolder + " doesn't exist, creating.");
                     var destinationFolderName = Regex.Replace(destinationFolder, @"^.*\\", "");
-                    Folder folder = new Folder(service) {DisplayName = destinationFolderName};
+                    Folder folder = new Folder(service) { DisplayName = destinationFolderName };
                     folder.Save(parentFolderId);
                     folders.Add(new ExchangeFolder()
                     {
