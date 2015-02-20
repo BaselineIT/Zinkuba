@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RendezzUI", "RendezzUI\Rend
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartThreadPool", "SmartThreadPool\SmartThreadPool.csproj", "{74D4C33F-7CC8-4B2A-A7DF-D8B6E63B6EBD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "aTest", "WpfApplication1\aTest.csproj", "{068B59EF-EBDE-4C02-97EA-79A10DA8F53C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,6 +50,12 @@ Global
 		{74D4C33F-7CC8-4B2A-A7DF-D8B6E63B6EBD}.Publish|Any CPU.Build.0 = Publish|Any CPU
 		{74D4C33F-7CC8-4B2A-A7DF-D8B6E63B6EBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{74D4C33F-7CC8-4B2A-A7DF-D8B6E63B6EBD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{068B59EF-EBDE-4C02-97EA-79A10DA8F53C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{068B59EF-EBDE-4C02-97EA-79A10DA8F53C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{068B59EF-EBDE-4C02-97EA-79A10DA8F53C}.Publish|Any CPU.ActiveCfg = Release|Any CPU
+		{068B59EF-EBDE-4C02-97EA-79A10DA8F53C}.Publish|Any CPU.Build.0 = Release|Any CPU
+		{068B59EF-EBDE-4C02-97EA-79A10DA8F53C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{068B59EF-EBDE-4C02-97EA-79A10DA8F53C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

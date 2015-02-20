@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO.Ports;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using log4net;
@@ -93,6 +94,8 @@ namespace Zinkuba.MailModule.MessageProcessor
                     EmailMessageSchema.IsReadReceiptRequested,
                     EmailMessageSchema.IsDeliveryReceiptRequested,
                     EmailMessageSchema.Id,
+                    ItemSchema.ItemClass,
+                    ItemSchema.Subject,
                     ItemSchema.MimeContent,
                     ItemSchema.Categories,
                     ItemSchema.ConversationId,
@@ -219,7 +222,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                                     } while (!success);
                                     foreach (var emailMessage in emails)
                                     {
-                                        Logger.Debug("Exporting " + emailMessage.Id.UniqueId);
+                                        Logger.Debug("Exporting " + emailMessage.Id.UniqueId + " from " + exchangeFolder.FolderPath + " : " + emailMessage.Subject);
                                         var flags = new Collection<MessageFlags>();
                                         Boolean flag;
                                         if (emailMessage.TryGetProperty(EmailMessageSchema.IsRead, out flag) && !flag) flags.Add(MessageFlags.Unread);
@@ -237,6 +240,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                                             Flags = flags,
                                             SourceFolder = exchangeFolder.FolderPath,
                                             DestinationFolder = exchangeFolder.MappedDestination,
+                                            ItemClass = emailMessage.ItemClass
                                         };
                                         Object result;
                                         if (emailMessage.TryGetProperty(ItemSchema.IconIndex, out result) && result != null) message.IconIndex = (int)emailMessage.IconIndex;

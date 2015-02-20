@@ -209,6 +209,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                                 var message = GetImapMessage(_imapClient, folder, uid);
                                 message.Subject = Regex.Match(message.RawMessage, @"[\r\n]Subject: (.*?)[\r\n]").Groups[1].Value;
                                 //Logger.Debug(folder + "/" + uid + "/" + subject + " " + String.Join(", ",flags));
+                                Logger.Debug("Exporting " + uid + " from " + folder + " : " + message.Subject);
                                 if (!flags.Contains(MessageFlag.Seen))
                                 {
                                     message.Flags.Add(MessageFlags.Unread);
@@ -263,7 +264,6 @@ namespace Zinkuba.MailModule.MessageProcessor
             if (!Closed)
             {
                 Closed = true;
-                NextReader.Close();
                 if (_imapClient != null)
                 {
                     try
@@ -275,6 +275,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                         Logger.Error("Failed to logout : " + ex.Message, ex);
                     }
                 }
+                ThreadPool.QueueUserWorkItem(state => NextReader.Close());
             }
         }
     }

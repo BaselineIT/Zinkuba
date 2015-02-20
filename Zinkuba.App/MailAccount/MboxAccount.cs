@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Zinkuba.App.Mailbox;
 
 namespace Zinkuba.App.MailAccount
@@ -16,8 +12,7 @@ namespace Zinkuba.App.MailAccount
         public MboxAccount()
         {
             _mailboxes = new ObservableCollection<MboxMailbox>() { new MboxMailbox(this) };
-            Mailboxes = new ReturnTypeCollection<IMailbox>();
-            Mailboxes.UnderlyingCollection = _mailboxes;
+            Mailboxes = new ReturnTypeCollection<IMailbox> {UnderlyingCollection = _mailboxes};
             _mailboxes.CollectionChanged += MailboxesOnCollectionChanged;
         }
 

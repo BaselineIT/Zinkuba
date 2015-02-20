@@ -27,21 +27,21 @@
                             <Button Content="Start Exporter" HorizontalAlignment="Right" Margin="10,0,0,0" Width="86"  Click="StartExport"/>
                         </StackPanel>
                     </DockPanel>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" DockPanel.Dock="Bottom" Margin="0,5,0,0">
-                        <ItemsControl Margin="0,5,0,0"  ItemsSource="{Binding Path=MailSources}" />
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" DockPanel.Dock="Bottom" Margin="0,5,0,0" IsTabStop="False">
+                        <ItemsControl Margin="0,5,0,0"  ItemsSource="{Binding Path=MailSources}" IsTabStop="False" />
                     </ScrollViewer>
                 </DockPanel>
             </GroupBox>
             <GroupBox Header="Mail Destination" Grid.Row="1">
-                <StackPanel Margin="0,5,0,0">
-                    <ComboBox Margin="0,0,0,0" HorizontalAlignment="Left" Name="TargetComboBox" SelectionChanged="TargetComboBox_SelectionChanged">
+                <DockPanel Margin="0,5,0,0" LastChildFill="True">
+                    <ComboBox Margin="0,0,0,0" HorizontalAlignment="Left" Name="TargetComboBox" SelectionChanged="TargetComboBox_SelectionChanged" DockPanel.Dock="Top">
                         <ComboBoxItem Content="PST"></ComboBoxItem>
                         <ComboBoxItem Content="Exchange"></ComboBoxItem>
                     </ComboBox>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,0,0,0">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,0,0,0" DockPanel.Dock="Bottom" IsTabStop="False">
                         <ContentPresenter Name="MailDestination"/>
                     </ScrollViewer>
-                </StackPanel>
+                </DockPanel>
             </GroupBox>
         </Grid>
     </Grid>

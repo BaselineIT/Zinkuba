@@ -82,8 +82,8 @@ namespace Zinkuba.MailModule
             IMessageWriter previousWriter = null;
             foreach (var messageProcessor in messageProcessors)
             {
-                messageProcessor.FailedMessage += MessageFailed;
-                messageProcessor.IgnoredMessage += MessageIgnored;
+                messageProcessor.FailedMessage += (sender, args) => MessageFailed(messageProcessor.FailedMessageCount);
+                messageProcessor.IgnoredMessage += (sender, args) => MessageIgnored(messageProcessor.IgnoredMessageCount);
                 messageProcessor.StatusChanged += MessageProcessorOnStatusChanged;
                 //var messageWriter = messageProcessor as IMessageWriter;
                 if (previousWriter != null)
@@ -101,7 +101,7 @@ namespace Zinkuba.MailModule
                 previousWriter = messageProcessor as IMessageWriter;
             }
             // Listen on success messge of last item
-            messageProcessors[messageProcessors.Count - 1].SucceededMessage += MessageExported;
+            messageProcessors[messageProcessors.Count - 1].SucceededMessage += (sender, args) => MessageExported(messageProcessors[messageProcessors.Count - 1].SucceededMessageCount);
             // listen on Total messages of first item
             ((IMessageSource)messageProcessors[0]).TotalMessagesChanged += OnTotalMessagesChanged;
 
@@ -131,19 +131,19 @@ namespace Zinkuba.MailModule
             }
         }
 
-        private void MessageExported(object sender, EventArgs eventArgs)
+        private void MessageExported(int exportedMails)
         {
-            ExportedMails++;
+            ExportedMails = exportedMails;
         }
 
-        private void MessageIgnored(object sender, EventArgs e)
+        private void MessageIgnored(int ignoredMails)
         {
-            IgnoredMails++;
+            IgnoredMails = ignoredMails;
         }
 
-        private void MessageFailed(object sender, EventArgs eventArgs)
+        private void MessageFailed(int failedMails)
         {
-            FailedMails++;
+            FailedMails = failedMails;
         }
 
         public bool Running { get { return State == MessageProcessorStatus.Started || State == MessageProcessorStatus.Initialising; } }

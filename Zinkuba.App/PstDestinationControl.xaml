@@ -6,7 +6,7 @@
              mc:Ignorable="d" 
              >
     <Grid Margin="0,10,0,0">
-        <StackPanel Orientation="Horizontal">
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
             <Label Content="Save Folder" Margin="0" />
             <TextBox x:Name="SaveFolder" Height="23" TextWrapping="Wrap" Width="407"/>
         </StackPanel>

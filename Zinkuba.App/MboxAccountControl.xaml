@@ -6,7 +6,7 @@
              mc:Ignorable="d">
     <Grid>
         <GroupBox Header="Mbox Source">
-            <ItemsControl Margin="5,0,0,0" ItemsSource="{Binding Path=Mailboxes}" />
+            <ItemsControl Margin="5,0,0,0" ItemsSource="{Binding Path=Mailboxes}"  IsTabStop="False"/>
         </GroupBox>
     </Grid>
 </UserControl>

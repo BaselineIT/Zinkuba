@@ -6,7 +6,7 @@
              mc:Ignorable="d" 
              >
     <Grid Margin="0,5,0,0">
-        <GroupBox Header="Exchange Source">
+        <GroupBox Header="Exchange Source" IsTabStop="False">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" >
                     <Button Content=" Remove " Click="RemoveItem"/>
@@ -14,7 +14,7 @@
                     <TextBox Text="{Binding Server}" x:Name="Server" HorizontalAlignment="Left" Height="23" Margin="0" TextWrapping="NoWrap" VerticalAlignment="Center" Width="217"/>
                     <Button Content="Add Account" Margin="10,0,0,0" Click="AddMailboxClick"/>
                 </StackPanel>
-                <ItemsControl Margin="5,0,0,0" ItemsSource="{Binding Path=Mailboxes}" />
+                <ItemsControl Margin="5,0,0,0" ItemsSource="{Binding Path=Mailboxes}" IsTabStop="False" />
             </StackPanel>
         </GroupBox>
     </Grid>

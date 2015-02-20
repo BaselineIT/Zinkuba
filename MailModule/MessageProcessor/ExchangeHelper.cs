@@ -92,7 +92,8 @@ namespace Zinkuba.MailModule.MessageProcessor
                         }
                         else
                         {
-                            if (status.Status != System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.NoError)
+                            if (status.Status !=
+                                System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.NoError)
                             {
                                 // If there are any other errors in the certificate chain, the certificate is invalid,
                                 // so the method returns false.
@@ -105,6 +106,10 @@ namespace Zinkuba.MailModule.MessageProcessor
                 // When processing reaches this line, the only errors in the certificate chain are 
                 // untrusted root errors for self-signed certificates. These certificates are valid
                 // for default Exchange server installations, so return true.
+                return true;
+            } else if ((sslPolicyErrors & System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch) != 0)
+            {
+               // Certificate name is not correct, we don't care
                 return true;
             }
             else
