@@ -110,7 +110,7 @@ namespace Zinkuba.MailModule.MessageProcessor
             }
             try
             {
-                Logger.Debug("Buffering " + msg.SourceId + " : " + msg.DestinationFolder + @"\" + msg.Subject + " (" + String.Join(", ", msg.Flags) + ") [" + String.Join(", ", msg.Categories) + "]");
+                Logger.Debug("Buffering " + msg.SourceId + " : " + msg.DestinationFolder + @"\" + msg.Subject + " (" + String.Join(", ", msg.Flags) + ") [" + msg.ItemClass + "]");
                 EmailMessage item = PrepareEWSItem(msg);
                 itemBuffer.Add(item);
                 //SucceededMessageCount++;
@@ -149,7 +149,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                             }
                             else
                             {
-                                Logger.Error("Failed to import message " + itemBuffer[count] + " into " + _username + "@" + _hostname + "/" +
+                                Logger.Error("Failed to import message " + itemBuffer[count] + "[" + itemBuffer[count].ItemClass + "] into " + _username + "@" + _hostname + "/" +
                                              previousFolder + " [" + (Environment.TickCount - start) + "ms]" +
                                              " : [" + serviceResponse.ErrorCode + "]" + serviceResponse.ErrorMessage);
                                 FailedMessageCount++;
@@ -166,6 +166,22 @@ namespace Zinkuba.MailModule.MessageProcessor
                                     _username + "@" + _hostname + "/" + previousFolder + " [" +
                                     (Environment.TickCount - start) + "ms]");
                         SucceededMessageCount += itemBuffer.Count;
+                    }
+                }
+                // This exception still gets through, its very odd, this should be part of the response codes
+                catch (ServiceLocalException e)
+                {
+                    if (Regex.Match(e.Message,@"The type of the object in the store \(\w+\) does not match that of the local object \(\w+\).").Success)
+                    {
+                        // this is an error we can ignore, it just means we sent it as an email message, but its actually a meeting request/response, exchange imports it anyway
+                        Logger.Info("Saved " + itemBuffer.Count + " messages [" + (bufferedSize / 1024) + "Kb] into " +
+                                    _username + "@" + _hostname + "/" + previousFolder + " [" +
+                                    (Environment.TickCount - start) + "ms]");
+                        SucceededMessageCount += itemBuffer.Count;
+                    }
+                    else
+                    {
+                        throw e;
                     }
                 }
                 catch (Exception e)
@@ -194,7 +210,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                 {
                     try
                     {
-                        Logger.Debug("Importing " + msg.SourceId + " : " + msg.DestinationFolder + @"\" + msg.Subject + " (" + String.Join(", ", msg.Flags) + ") [" + String.Join(", ", msg.Categories) + "]");
+                        Logger.Debug("Importing " + msg.SourceId + " : " + msg.DestinationFolder + @"\" + msg.Subject + " (" + String.Join(", ", msg.Flags) + ") [" + msg.ItemClass + "]");
                         EmailMessage item = PrepareEWSItem(msg);
                         FolderId parentFolderId = GetCreateFolder(previousFolder);
                         item.Save(parentFolderId);
@@ -255,7 +271,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                         var match = Regex.Match(msg.RawMessage, "^Subject:(.*)");
                         Logger.Warn(
                             "Failed on try 1 of 2 to import message " + msg + " [" +
-                            (match.Success ? match.Groups[0].ToString() : "") +
+                            msg.Subject +
                             "] into " + _username + "@" + _hostname + "/" + msg.DestinationFolder + " [" + (Environment.TickCount - start) + "ms]" +
                             " : " + e.Message, e);
                         secondAttempt = true;

@@ -187,7 +187,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                                 }
                                 else
                                 {
-                                    Logger.Warn("Will not import message, item is not a mail message [" + item.GetType() + "]");
+                                    Logger.Warn("Will not export message, item is not a mail message [" + item.GetType() + "]");
                                     IgnoredMessageCount++;
                                 }
                             }

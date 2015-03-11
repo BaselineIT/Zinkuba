@@ -224,9 +224,7 @@
     <EmbeddedResource Include="..\SmartThreadPool\bin\$(Configuration)\Windows\SmartThreadPool.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Microsoft.Exchange.WebServices.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <EmbeddedResource Include="Microsoft.Exchange.WebServices.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

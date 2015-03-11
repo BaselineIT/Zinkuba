@@ -1,6 +1,8 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Windows;
 
 namespace Zinkuba.App
@@ -10,6 +12,8 @@ namespace Zinkuba.App
     /// </summary>
     public partial class App : Application
     {
+        // Exchange Webservices needs to be a physical dll, because a part of it checks for its existence, if you load it as a stream it af-kaks
+        static private readonly String[] PhysicalAssemblies = { "Microsoft.Exchange.WebServices" };
 
         private void App_OnStartup(object sender, StartupEventArgs e)
         {
@@ -29,7 +33,19 @@ namespace Zinkuba.App
                     {
                         Byte[] assemblyData = new Byte[stream.Length];
                         stream.Read(assemblyData, 0, assemblyData.Length);
-                        return Assembly.Load(assemblyData);
+                        if (Array.Exists(PhysicalAssemblies, element => element.Equals(assemblyName.Name)))
+                        {
+                            String tempFile = Path.GetTempFileName();
+                            File.WriteAllBytes(tempFile, assemblyData);
+                            Console.WriteLine("[" + Thread.CurrentThread.ManagedThreadId + "-" +
+                                              Thread.CurrentThread.Name + "] Loading assembly " + assemblyName.Name +
+                                              " from " + tempFile);
+                            return Assembly.LoadFile(tempFile);
+                        }
+                        else
+                        {
+                            return Assembly.Load(assemblyData);
+                        }
                     }
                 }
             }
