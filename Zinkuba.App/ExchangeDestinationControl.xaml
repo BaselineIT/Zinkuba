@@ -10,7 +10,7 @@
                 <Label Content="Exchange Server" Margin="0" />
                 <TextBox x:Name="Server" Text="{Binding Server}"  Height="23" TextWrapping="Wrap" Width="407"/>
             </StackPanel>
-            <ItemsControl ItemsSource="{Binding Mailboxes}" DockPanel.Dock="Bottom"/>
+            <ItemsControl ItemsSource="{Binding Mailboxes}" DockPanel.Dock="Bottom" IsTabStop="False" />
         </DockPanel>
     </Grid>
 </UserControl>

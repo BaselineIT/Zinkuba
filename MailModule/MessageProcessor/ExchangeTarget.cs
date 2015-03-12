@@ -18,8 +18,8 @@ namespace Zinkuba.MailModule.MessageProcessor
 {
     public class ExchangeTarget : BaseMessageProcessor, IMessageReader<RawMessageDescriptor>, IMessageDestination
     {
-        private const int MaxBufferSize = 5242880;
-        private const int MaxBufferMails = 15;
+        private const int MaxBufferSize = 5242880; // 5MB of mails before we force a commit
+        private const int MaxBufferMails = 50; // 50 mails before we force a commit
         private static readonly ILog Logger = LogManager.GetLogger(typeof(ExchangeTarget));
 
         private readonly string _hostname;
@@ -104,7 +104,7 @@ namespace Zinkuba.MailModule.MessageProcessor
 
         private void ImportBulk(RawMessageDescriptor msg)
         {
-            if ((!String.IsNullOrEmpty(previousFolder) && !previousFolder.Equals(msg.DestinationFolder)) || bufferedSize > MaxBufferSize || itemBuffer.Count > MaxBufferMails)
+            if ((!String.IsNullOrEmpty(previousFolder) && !previousFolder.Equals(msg.DestinationFolder)) || bufferedSize >= MaxBufferSize || itemBuffer.Count >= MaxBufferMails)
             {
                 CommitBufferedMessages();
             }
