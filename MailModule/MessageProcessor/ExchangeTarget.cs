@@ -471,6 +471,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                 {
                     Logger.Info(messageStats.Value.ToString());
                 }
+                Logger.Info("Closing Exchange Target");
             }
         }
 
