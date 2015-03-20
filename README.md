@@ -13,7 +13,7 @@ Mail Exporter and Importer for IMAP, Exchange, mbox, PST
 
 ## Download
 
-Goto releases to get the the latest release and associated exe
+Goto releases to get the the latest release and associated exe https://github.com/rendezz/Zinkuba/releases
 
 ## Requires
 
