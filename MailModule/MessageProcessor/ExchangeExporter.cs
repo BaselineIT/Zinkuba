@@ -98,10 +98,8 @@ namespace Zinkuba.MailModule.MessageProcessor
                     ItemSchema.Subject,
                     ItemSchema.MimeContent,
                     ItemSchema.Categories,
-                    ItemSchema.ConversationId,
                     ItemSchema.Importance,
                     ItemSchema.InReplyTo,
-                    ItemSchema.IsAssociated,
                     ItemSchema.IsFromMe,
                     ItemSchema.IsReminderSet,
                     ItemSchema.IsResend,
@@ -112,6 +110,11 @@ namespace Zinkuba.MailModule.MessageProcessor
                     ItemSchema.Id,
                     contentTypeProperty,
                 };
+                if (service.RequestedServerVersion != ExchangeVersion.Exchange2007_SP1)
+                {
+                    fullPropertySet.Add(ItemSchema.ConversationId);
+                    fullPropertySet.Add(ItemSchema.IsAssociated);
+                }
                 if (service.RequestedServerVersion == ExchangeVersion.Exchange2013)
                 {
                     fullPropertySet.Add(ItemSchema.ArchiveTag);

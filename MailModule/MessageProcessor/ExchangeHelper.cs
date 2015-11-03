@@ -27,6 +27,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                     {
                         Credentials = new WebCredentials(username, password),
                         Url = new Uri("https://" + hostname + "/EWS/Exchange.asmx"),
+                        Timeout = 600000,
                     };
                     Logger.Debug("Binding to exchange server " + exchangeService.Url + " as " + username + ", version " +
                                  ExchangeHelper.ExchangeVersions[attempt]);
