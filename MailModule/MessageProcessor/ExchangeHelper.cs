@@ -27,7 +27,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                     {
                         Credentials = new WebCredentials(username, password),
                         Url = new Uri("https://" + hostname + "/EWS/Exchange.asmx"),
-                        Timeout = 600000,
+                        Timeout = 30*60*1000, // 30 mins
                     };
                     Logger.Debug("Binding to exchange server " + exchangeService.Url + " as " + username + ", version " +
                                  ExchangeHelper.ExchangeVersions[attempt]);
@@ -89,6 +89,12 @@ namespace Zinkuba.MailModule.MessageProcessor
                         {
                             // expired, we don't mind
                             //Logger.Warn("Certificate has expired, continuing regardless.");
+                            continue;
+                        }
+                        else if (status.Status == System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.PartialChain)
+                        {
+                            // chain has an invalid or inaccessible root cert, we don't mind this either (badly configured local exchanges)
+                            //Logger.Warn("Certificate chain is partial, continuing regardless.");
                             continue;
                         }
                         else
