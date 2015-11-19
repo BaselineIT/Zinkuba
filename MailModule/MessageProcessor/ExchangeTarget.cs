@@ -31,7 +31,6 @@ namespace Zinkuba.MailModule.MessageProcessor
         private List<ExchangeFolder> folders;
         private readonly object _folderCreationLock = new object();
         private readonly SmartThreadPool pool;
-        private ExtendedPropertyDefinition PR_MESSAGE_FLAGS_msgflag_read = new ExtendedPropertyDefinition(3591, MapiPropertyType.Integer);
         private String previousFolder;
         private List<Item> itemBuffer;
         private int bufferedSize;
@@ -385,11 +384,18 @@ namespace Zinkuba.MailModule.MessageProcessor
                     Logger.Warn("Failed to set flag on " + folder + @"\" + item.Subject + ", ignoring flag.", e);
                 }
             }
+
+            if (msg.FlagIcon != FlagIcon.None)
+            {
+                item.SetExtendedProperty(ExchangeHelper.PidTagFlagStatus,2);
+                item.SetExtendedProperty(ExchangeHelper.PidTagFollowupIcon, ExchangeHelper.ConvertFlag(msg.FlagIcon));
+            }
+
             try
             {
                 if (!msg.Flags.Contains(MessageFlags.Draft))
                 {
-                    item.SetExtendedProperty(PR_MESSAGE_FLAGS_msgflag_read, 1);
+                    item.SetExtendedProperty(ExchangeHelper.PR_MESSAGE_FLAGS_msgflag_read, 1);
                 }
                 if (msg.Importance != null) item.Importance = (Importance)msg.Importance;
                 if (msg.Sensitivity != null) item.Sensitivity = (Sensitivity)msg.Sensitivity;

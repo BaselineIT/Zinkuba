@@ -5,12 +5,17 @@ using System.Net;
 using log4net;
 using Microsoft.Exchange.WebServices.Data;
 using Zinkuba.MailModule.API;
+using Zinkuba.MailModule.MessageDescriptor;
 
 namespace Zinkuba.MailModule.MessageProcessor
 {
     internal class ExchangeHelper
     {
         private static readonly ILog Logger = LogManager.GetLogger(typeof(ExchangeHelper));
+        internal static ExtendedPropertyDefinition ContentTypeProperty = new ExtendedPropertyDefinition(DefaultExtendedPropertySet.InternetHeaders, "Content-Type", MapiPropertyType.String);
+        internal static ExtendedPropertyDefinition PidTagFollowupIcon = new ExtendedPropertyDefinition(0x1095, MapiPropertyType.Integer);
+        internal static ExtendedPropertyDefinition PidTagFlagStatus = new ExtendedPropertyDefinition(0x1090, MapiPropertyType.Integer);
+        internal static ExtendedPropertyDefinition PR_MESSAGE_FLAGS_msgflag_read = new ExtendedPropertyDefinition(3591, MapiPropertyType.Integer);
 
         internal static readonly ExchangeVersion[] ExchangeVersions = { ExchangeVersion.Exchange2013, ExchangeVersion.Exchange2010_SP2, ExchangeVersion.Exchange2010_SP1, ExchangeVersion.Exchange2010, ExchangeVersion.Exchange2007_SP1 };
 
@@ -58,6 +63,33 @@ namespace Zinkuba.MailModule.MessageProcessor
             }
             return exchangeService;
         }
+
+        public static FlagIcon ConvertFlag(int flag)
+        {
+            switch (flag)
+            {
+                case 1 : return FlagIcon.Outlook2003Purple;
+                case 2: return FlagIcon.Outlook2003Orange;
+                case 3: return FlagIcon.Outlook2003Green;
+                case 4: return FlagIcon.Outlook2003Yellow;
+                case 5: return FlagIcon.Outlook2003Blue;
+                default: return FlagIcon.Outlook2003Red;
+            }
+        }
+
+        public static int ConvertFlag(FlagIcon flag)
+        {
+            switch (flag)
+            {
+                case FlagIcon.Outlook2003Purple: return 1;
+                case FlagIcon.Outlook2003Orange: return 2;
+                case FlagIcon.Outlook2003Green: return 3;
+                case FlagIcon.Outlook2003Yellow: return 4;
+                case FlagIcon.Outlook2003Blue: return 5;
+                default: return 6;
+            }
+        }
+
 
         private static bool CertificateValidationCallBack(
             object sender,

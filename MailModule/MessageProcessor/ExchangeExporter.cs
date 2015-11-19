@@ -87,7 +87,6 @@ namespace Zinkuba.MailModule.MessageProcessor
             try
             {
                 Status = MessageProcessorStatus.Started;
-                var contentTypeProperty = new ExtendedPropertyDefinition(DefaultExtendedPropertySet.InternetHeaders, "Content-Type", MapiPropertyType.String);
                 var fullPropertySet = new PropertySet(PropertySet.FirstClassProperties)
                 {
                     EmailMessageSchema.IsRead,
@@ -108,7 +107,8 @@ namespace Zinkuba.MailModule.MessageProcessor
                     ItemSchema.Sensitivity,
                     ItemSchema.Subject,
                     ItemSchema.Id,
-                    contentTypeProperty,
+                    ExchangeHelper.ContentTypeProperty,
+                    ExchangeHelper.PidTagFollowupIcon,
                 };
                 if (service.RequestedServerVersion != ExchangeVersion.Exchange2007_SP1)
                 {
@@ -252,6 +252,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                                         if (emailMessage.TryGetProperty(ItemSchema.InReplyTo, out result) && result != null) message.InReplyTo = emailMessage.InReplyTo;
                                         if (emailMessage.TryGetProperty(ItemSchema.ConversationId, out result) && result != null) message.ConversationId = emailMessage.ConversationId.ChangeKey;
                                         if (emailMessage.TryGetProperty(ItemSchema.ReminderDueBy, out result) && result != null) message.ReminderDueBy = emailMessage.ReminderDueBy;
+                                        if (emailMessage.TryGetProperty(ExchangeHelper.PidTagFollowupIcon, out result) && result != null) message.FlagIcon = ExchangeHelper.ConvertFlag((int)result);
                                         if (emailMessage.TryGetProperty(ItemSchema.Categories, out result) && result != null && emailMessage.Categories.Count > 0)
                                         {
                                             foreach (var category in emailMessage.Categories)
@@ -267,7 +268,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                                         {
                                             foreach (var extendedProperty in emailMessage.ExtendedProperties)
                                             {
-                                                if (extendedProperty.PropertyDefinition.Equals(contentTypeProperty))
+                                                if (extendedProperty.PropertyDefinition.Equals(ExchangeHelper.ContentTypeProperty))
                                                 {
                                                     if (extendedProperty.Value.ToString().Contains("signed-data"))
                                                     {
