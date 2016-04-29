@@ -470,6 +470,7 @@ namespace S22.Imap {
 		/// prior to sending.</param>
 		void SendCommand(string command) {
 			ts.TraceInformation("C -> " + command);
+            //Console.WriteLine("C -> " + command);
 			// We can safely use UTF-8 here since it's backwards compatible with ASCII and comes in handy
 			// when sending strings in literal form (see RFC 3501, 4.3).
 			byte[] bytes = Encoding.UTF8.GetBytes(command + "\r\n");
@@ -524,6 +525,7 @@ namespace S22.Imap {
 								});
 							}
 							ts.TraceInformation("S -> " + s);
+                            //Console.WriteLine("S -> " + s);
 							return s;
 						} else
 							mem.WriteByte(b);
@@ -553,7 +555,8 @@ namespace S22.Imap {
 				}
 				string s = Encoding.ASCII.GetString(mem.ToArray());
 				ts.TraceInformation("S -> " + s);
-				return s;
+                //Console.WriteLine("S -> " + s);
+                return s;
 			}
 		}
 
@@ -2212,8 +2215,8 @@ namespace S22.Imap {
 					if (m.Success) {
 						try {
 							MailboxQuota quota = new MailboxQuota(m.Groups[2].Value,
-								UInt32.Parse(m.Groups[3].Value),
-								UInt32.Parse(m.Groups[4].Value));
+								UInt64.Parse(m.Groups[3].Value),
+								UInt64.Parse(m.Groups[4].Value));
 							quotas.Add(quota);
 						} catch {
 							throw new BadServerResponseException(response);

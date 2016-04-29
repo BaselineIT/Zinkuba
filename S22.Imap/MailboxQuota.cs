@@ -12,7 +12,7 @@ namespace S22.Imap {
 		/// <param name="Name">The name of the resource this MailboxQuota instance describes.</param>
 		/// <param name="Usage">The current usage of the resource in units of 1024  bytes.</param>
 		/// <param name="Limit">The limit of the resource in units of 1024 bytes.</param>
-		internal MailboxQuota(string Name, uint Usage, uint Limit) {
+		internal MailboxQuota(string Name, UInt64 Usage, UInt64 Limit) {
 			this.ResourceName = Name.ToUpperInvariant();
 			this.Usage = Convert.ToUInt64(Usage) * 1024;
 			this.Limit = Convert.ToUInt64(Limit) * 1024;
