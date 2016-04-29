@@ -14,6 +14,8 @@
                     <TextBox x:Name="Server" HorizontalAlignment="Left" Height="23" Margin="0" TextWrapping="NoWrap" Text="{Binding Server}" VerticalAlignment="Center" Width="217"/>
                     <CheckBox x:Name="SSL" Content="SSL" IsChecked="{Binding SSL}" HorizontalAlignment="Left" Margin="5,0,0,0" VerticalAlignment="Center" />
                     <CheckBox x:Name="UseGmailCheckBox" Content="Gmail?" HorizontalAlignment="Left" Margin="5,0,0,0" VerticalAlignment="Center" Checked="UseGmailCheckBox_Checked" />
+                    <Label Content="Limit Single Folder"/>
+                    <TextBox Name="Folder" Width="100" Text="{Binding Path=LimitSingleFolder}"/>
                     <Button Content="Add Account" Margin="20,0,0,0" Click="AddMailboxClick"/>
                 </StackPanel>
                 <ItemsControl Margin="5,0,0,0" ItemsSource="{Binding Path=Mailboxes}" />

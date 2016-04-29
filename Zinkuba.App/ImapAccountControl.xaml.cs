@@ -17,12 +17,12 @@ namespace Zinkuba.App
     /// </summary>
     public partial class ImapAccountControl : UserControl, IMailAccountControl
     {
-        private static readonly ILog Logger = LogManager.GetLogger(typeof (ImapAccountControl));
+        private static readonly ILog Logger = LogManager.GetLogger(typeof(ImapAccountControl));
         private ImapAccountDataContext _dataContext;
         public Action<IMailAccount> RemoveAccountFunction;
         public IMailAccount MirrorSource { get { return _account; } }
         private readonly ImapAccount _account;
-        public IMailAccount Account { get { return _account; }}
+        public IMailAccount Account { get { return _account; } }
 
         public ImapAccountControl(ImapAccount account)
         {
@@ -88,6 +88,8 @@ namespace Zinkuba.App
         private readonly ImapAccount _account;
         //public ObservableCollection<ImapMailbox> ImapMailboxes { get; set; }
         public AuthenticatedMailboxList Mailboxes { get; set; }
+        public String LimitSingleFolder { get { return _account.LimitFolder; } set { _account.LimitFolder = value; OnPropertyChanged("LimitSingleFolder"); } }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         public String Server

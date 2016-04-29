@@ -12,5 +12,6 @@ namespace Zinkuba.App.MailAccount
         DateTime EndDate { get; set; }
 
         ReturnTypeCollection<IMailbox> Mailboxes { get; }
+        String LimitFolder { get; set; }
     }
 }

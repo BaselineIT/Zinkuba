@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using log4net;
@@ -34,9 +35,9 @@ namespace Zinkuba.App.Mailbox
         public IMessageSource GetSource()
         {
             if(_account is ExchangeAccount)
-                return new ExchangeExporter(Username,Password,_account.Server,_account.StartDate,_account.EndDate.AddDays(1));
+                return new ExchangeExporter(Username,Password,_account.Server,_account.StartDate,_account.EndDate.AddDays(1), String.IsNullOrWhiteSpace(_account.LimitFolder) ? null : new List<string>() { _account.LimitFolder });
             if (_account is ImapAccount)
-                return new ImapExporter(Username, Password, _account.Server, _account.StartDate, _account.EndDate.AddDays(1), ((ImapAccount)_account).UseSsl);
+                return new ImapExporter(Username, Password, _account.Server, _account.StartDate, _account.EndDate.AddDays(1), ((ImapAccount)_account).UseSsl, String.IsNullOrWhiteSpace(_account.LimitFolder) ? null : new List<string>() { _account.LimitFolder });
             throw new Exception("Unknown Account");
         }
 

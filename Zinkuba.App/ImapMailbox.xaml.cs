@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Controls;
 using log4net;
@@ -103,7 +104,7 @@ namespace Zinkuba.App
         public IMessageSource GetSource()
         {
             return new ImapExporter(UsernameField.Text, PasswordField.Password, _account.Server.Text, _account.Account.StartDate, _account.Account.EndDate,
-                _account.SSL.IsChecked == true)
+                _account.SSL.IsChecked == true,_account.Account.LimitFolder == null ? null : new List<string> { _account.Account.LimitFolder })
             {
                 Provider = _account.UseGmailCheckBox.IsChecked == true ? MailProvider.GmailImap : MailProvider.DefaultImap,
                 Name = UsernameField.Text

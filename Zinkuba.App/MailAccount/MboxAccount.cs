@@ -39,6 +39,7 @@ namespace Zinkuba.App.MailAccount
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public ReturnTypeCollection<IMailbox> Mailboxes { get; private set; }
+        public string LimitFolder { get; set; }
 
         protected virtual void OnRemovedMailbox(IMailbox e)
         {

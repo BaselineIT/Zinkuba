@@ -30,11 +30,29 @@ namespace Zinkuba.MailModule.MessageDescriptor
         Outlook2003Red,
     }
 
+    public class FollowUpFlag
+    {
+        public DateTime CompleteDateTime;
+        public DateTime DueDateTime;
+        public DateTime StartDateTime;
+        public FollowUpFlagStatus Status;
+    }
+
+    public enum FollowUpFlagStatus
+    {
+        NotFlagged,
+        Flagged,
+        Complete,
+    }
+
     public class BaseMessageDescriptor
     {
         public String SourceId;
+        public DateTime? ReceivedDateTime;
+        public DateTime? SentDateTime;
         public String SourceFolder;
         public String DestinationFolder;
+        public FollowUpFlag FollowUpFlag; 
         public Collection<MessageFlags> Flags = new Collection<MessageFlags>();
         public FlagIcon FlagIcon { get; set; }
         public string Subject { get; set; }

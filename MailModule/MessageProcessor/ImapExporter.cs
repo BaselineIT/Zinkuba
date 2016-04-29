@@ -23,6 +23,7 @@ namespace Zinkuba.MailModule.MessageProcessor
         private readonly DateTime? _startDate;
         private readonly DateTime? _endDate;
         private readonly bool _useSsl;
+        private readonly List<string> _mailboxList;
         private readonly string _username;
         private readonly string _password;
         public MailProvider Provider = MailProvider.DefaultImap;
@@ -39,7 +40,7 @@ namespace Zinkuba.MailModule.MessageProcessor
         private int _totalMessages;
         private bool _testOnly;
 
-        public ImapExporter(String username, String password, String server, DateTime startDate, DateTime endDate, bool useSSL)
+        public ImapExporter(String username, String password, String server, DateTime startDate, DateTime endDate, bool useSSL, List<String> mailboxList)
         {
             _password = password;
             _server = server;
@@ -47,6 +48,7 @@ namespace Zinkuba.MailModule.MessageProcessor
             _endDate = endDate;
             _username = username;
             _useSsl = useSSL;
+            _mailboxList = mailboxList;
             Name = username;
         }
 
@@ -80,6 +82,16 @@ namespace Zinkuba.MailModule.MessageProcessor
                             : _searchCondition.And(SearchCondition.Before((DateTime) _endDate));
                     }
                     Logger.Debug("Only getting messages " + _searchCondition);
+                }
+                if (_mailboxList != null)
+                {
+                    var newFolders = new List<String>();
+                    foreach (var mailbox in _mailboxList)
+                    {
+                        var mailboxMatch = mailbox.ToLower().Replace('\\', '/'); ;
+                        newFolders.AddRange(folders.Where(folder => folder.ToLower().Equals(mailboxMatch)));
+                    }
+                    folders = newFolders;
                 }
                 foreach (var folderPath in folders)
                 {
@@ -115,7 +127,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                                 Mailbox = folder
                             });
                             TotalMessages += !_testOnly ? messageCount : (messageCount > 20 ? 20 : messageCount);
-                            Logger.Debug("Will process " + folderPath + " " + messageCount + " messages, " + TotalMessages + " messages total so far.");
+                            Logger.Debug("Will process " + folderPath + " => " + destinationFolder + ", " + messageCount + " messages, " + TotalMessages + " messages total so far.");
                         }
                         catch (Exception ex)
                         {

@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Amib.Threading;
 using log4net;
@@ -20,6 +21,7 @@ namespace Zinkuba.MailModule.MessageProcessor
     {
         private const int MaxBufferSize = 5242880; // 5MB of mails before we force a commit
         private const int MaxBufferMails = 50; // 50 mails before we force a commit
+        private const int MaxRetryOnUnknownError = 5;
         private static readonly ILog Logger = LogManager.GetLogger(typeof(ExchangeTarget));
 
         private readonly string _hostname;
@@ -32,7 +34,7 @@ namespace Zinkuba.MailModule.MessageProcessor
         private readonly object _folderCreationLock = new object();
         private readonly SmartThreadPool pool;
         private String previousFolder;
-        private List<Item> itemBuffer;
+        private List<ExchangeItemContainer> itemBuffer;
         private int bufferedSize;
 
 
@@ -41,7 +43,7 @@ namespace Zinkuba.MailModule.MessageProcessor
             _hostname = hostname;
             _username = username;
             _password = password;
-            itemBuffer = new List<Item>();
+            itemBuffer = new List<ExchangeItemContainer>();
             pool = new SmartThreadPool() { MaxThreads = 5 };
         }
 
@@ -50,6 +52,11 @@ namespace Zinkuba.MailModule.MessageProcessor
             if (Status == MessageProcessorStatus.Started || Status == MessageProcessorStatus.Initialised)
             {
                 Status = MessageProcessorStatus.Started;
+                // limit the size of the queue
+                while (_queue.Count > 150)
+                {
+                    Thread.Sleep(1000);
+                }
                 _queue.Consume(message);
             }
             else
@@ -67,7 +74,7 @@ namespace Zinkuba.MailModule.MessageProcessor
             //service.TraceEnabled = true;
             //service.TraceFlags = TraceFlags.All;
             folders = new List<ExchangeFolder>();
-            ExchangeHelper.GetAllFolders(service, new ExchangeFolder { Folder = Folder.Bind(service, WellKnownFolderName.MsgFolderRoot) }, folders, false);
+            ExchangeHelper.GetAllSubFolders(service, new ExchangeFolder { Folder = Folder.Bind(service, WellKnownFolderName.MsgFolderRoot) }, folders, false);
             _lastState = new ImportState();
             _queue = new PCQueue<RawMessageDescriptor, ImportState>(Name + "-exchangeTarget")
             {
@@ -103,6 +110,7 @@ namespace Zinkuba.MailModule.MessageProcessor
 
         private void ImportBulk(RawMessageDescriptor msg)
         {
+            // Commit messages if new folder or the buffer is maxed out (either size wise or count wise)
             if ((!String.IsNullOrEmpty(previousFolder) && !previousFolder.Equals(msg.DestinationFolder)) || bufferedSize >= MaxBufferSize || itemBuffer.Count >= MaxBufferMails)
             {
                 CommitBufferedMessages();
@@ -111,7 +119,7 @@ namespace Zinkuba.MailModule.MessageProcessor
             {
                 Logger.Debug("Buffering " + msg.SourceId + " : " + msg.DestinationFolder + @"\" + msg.Subject + " (" + String.Join(", ", msg.Flags) + ") [" + msg.ItemClass + "]");
                 EmailMessage item = PrepareEWSItem(msg);
-                itemBuffer.Add(item);
+                itemBuffer.Add(new ExchangeItemContainer() {ExchangeItem = item, MsgDescriptor = msg});
                 //SucceededMessageCount++;
                 bufferedSize += msg.RawMessage.Length;
             }
@@ -127,74 +135,168 @@ namespace Zinkuba.MailModule.MessageProcessor
 
         private void CommitBufferedMessages()
         {
-            if (itemBuffer.Count > 0)
+            int tryCount = 0;
+            var retryItems = new List<ExchangeItemContainer>();
+            while (itemBuffer.Count > 0)
             {
+                Logger.Debug("Committing " + itemBuffer.Count + " messages to EWS.");
+                retryItems.Clear();
+                tryCount++;
                 var start = Environment.TickCount;
-                FolderId parentFolderId = GetCreateFolder(previousFolder);
                 try
                 {
-                    var response = service.CreateItems(itemBuffer.AsEnumerable(), parentFolderId,
-                        MessageDisposition.SaveOnly, null);
-                    if (response.OverallResult != ServiceResult.Success)
+                    try
                     {
-                        var count = 0;
-                        var successCount = 0;
-                        foreach (var serviceResponse in response)
+                        FolderId parentFolderId = GetCreateFolder(previousFolder);
+                        var response =
+                            service.CreateItems(
+                                itemBuffer.Select(exchangeItemContainer => exchangeItemContainer.ExchangeItem)
+                                    .AsEnumerable(), parentFolderId,
+                                MessageDisposition.SaveOnly, null);
+                        if (response.OverallResult != ServiceResult.Success)
                         {
-                            if (serviceResponse.Result == ServiceResult.Success)
+                            Logger.Warn("Looks like some items succeeded, others failed, checking.");
+                            var count = 0;
+                            var successCount = 0;
+                            foreach (var serviceResponse in response)
                             {
-                                successCount++;
-                                SucceededMessageCount++;
+                                if (serviceResponse.Result == ServiceResult.Success)
+                                {
+                                    successCount++;
+                                    SucceededMessageCount++;
+                                }
+                                else
+                                {
+                                    if (serviceResponse.ErrorCode == ServiceError.ErrorTimeoutExpired ||
+                                        serviceResponse.ErrorCode == ServiceError.ErrorBatchProcessingStopped ||
+                                        serviceResponse.ErrorCode == ServiceError.ErrorServerBusy)
+                                    {
+                                        // we can attempt these again
+                                        Logger.Warn("Failed to import message " +
+                                                    itemBuffer[count].MsgDescriptor.Subject + "[" +
+                                                    itemBuffer[count].ExchangeItem.ItemClass + "] into " + _username +
+                                                    "@" +
+                                                    _hostname +
+                                                    "/" +
+                                                    previousFolder + " [" + (Environment.TickCount - start) + "ms]" +
+                                                    ", will retry, not a permanent error : [" +
+                                                    serviceResponse.ErrorCode + "]" +
+                                                    serviceResponse.ErrorMessage);
+                                        retryItems.Add(itemBuffer[count]);
+                                    }
+                                    else
+                                    {
+                                        Logger.Error("Failed to import message " +
+                                                     itemBuffer[count].MsgDescriptor.Subject + "[" +
+                                                     itemBuffer[count].ExchangeItem.ItemClass + "] into " + _username +
+                                                     "@" +
+                                                     _hostname +
+                                                     "/" +
+                                                     previousFolder + " [" + (Environment.TickCount - start) + "ms]" +
+                                                     ", permanent error : [" + serviceResponse.ErrorCode + "]" +
+                                                     serviceResponse.ErrorMessage);
+                                        FailedMessageCount++;
+                                    }
+                                }
+                                count++;
                             }
-                            else
-                            {
-                                Logger.Error("Failed to import message " + itemBuffer[count] + "[" + itemBuffer[count].ItemClass + "] into " + _username + "@" + _hostname + "/" +
-                                             previousFolder + " [" + (Environment.TickCount - start) + "ms]" +
-                                             " : [" + serviceResponse.ErrorCode + "]" + serviceResponse.ErrorMessage);
-                                FailedMessageCount++;
-                            }
-                            count++;
+                            Logger.Warn("Saved " + successCount + " of a possible " + itemBuffer.Count +
+                                        " messages into " +
+                                        _username + "@" + _hostname + "/" + previousFolder + " [" +
+                                        (Environment.TickCount - start) + "ms]");
                         }
-                        Logger.Info("Saved " + successCount + " of a possible " + itemBuffer.Count + " messages into " +
-                                    _username + "@" + _hostname + "/" + previousFolder + " [" +
-                                    (Environment.TickCount - start) + "ms]");
+                        else
+                        {
+                            Logger.Info("Saved " + itemBuffer.Count + " messages [" + (bufferedSize/1024) + "Kb] into " +
+                                        _username + "@" + _hostname + "/" + previousFolder + " [" +
+                                        (Environment.TickCount - start) + "ms]");
+                            SucceededMessageCount += itemBuffer.Count;
+                        }
                     }
-                    else
+                        // This exception still gets through, its very odd, this should be part of the response codes
+                    catch (ServiceLocalException e)
                     {
-                        Logger.Info("Saved " + itemBuffer.Count + " messages [" + (bufferedSize/1024) + "Kb] into " +
-                                    _username + "@" + _hostname + "/" + previousFolder + " [" +
-                                    (Environment.TickCount - start) + "ms]");
-                        SucceededMessageCount += itemBuffer.Count;
+                        if (
+                            Regex.Match(e.Message,
+                                @"The type of the object in the store \(\w+\) does not match that of the local object \(\w+\).")
+                                .Success)
+                        {
+                            // this is an error we can ignore, it just means we sent it as an email message, but its actually a meeting request/response, exchange imports it anyway
+                            Logger.Info("Saved " + itemBuffer.Count + " messages [" + (bufferedSize/1024) + "Kb] into " +
+                                        _username + "@" + _hostname + "/" + previousFolder + " [" +
+                                        (Environment.TickCount - start) + "ms]");
+                            SucceededMessageCount += itemBuffer.Count;
+                        }
+                        else
+                        {
+                            Logger.Error("Got a service local exception I didn't understand.");
+                            // this will be caught by the bigger try and processed correctly
+                            throw e;
+                        }
                     }
-                }
-                // This exception still gets through, its very odd, this should be part of the response codes
-                catch (ServiceLocalException e)
-                {
-                    if (Regex.Match(e.Message,@"The type of the object in the store \(\w+\) does not match that of the local object \(\w+\).").Success)
+                    catch (ServerBusyException e)
                     {
-                        // this is an error we can ignore, it just means we sent it as an email message, but its actually a meeting request/response, exchange imports it anyway
-                        Logger.Info("Saved " + itemBuffer.Count + " messages [" + (bufferedSize / 1024) + "Kb] into " +
-                                    _username + "@" + _hostname + "/" + previousFolder + " [" +
-                                    (Environment.TickCount - start) + "ms]");
-                        SucceededMessageCount += itemBuffer.Count;
+                        var retryWait = 30000;
+                        // make sure its reasonable
+                        if (e.BackOffMilliseconds > retryWait && e.BackOffMilliseconds < 300000)
+                        {
+                            retryWait = e.BackOffMilliseconds;
+                        }
+                        Logger.Error("Failed to create items, server too busy, backing off (" + (int) (retryWait/1000) +
+                                     "s) and trying again : " +
+                                     e.Message);
+                        // Lets loop back around and try again.
+                        Thread.Sleep(retryWait); // Sleep x seconds
+                        continue; // run loop again
                     }
-                    else
+                    catch (ServiceRequestException e)
                     {
-                        throw e;
+                        if (e.GetBaseException() is System.Net.WebException)
+                        {
+                            var retryWait = 30000;
+                            Logger.Error("Failed to create items, error connecting to server, backing off (" + (int)(retryWait / 1000) +"s) and trying again : " + e.Message);
+                            // Lets loop back around and try again.
+                            Thread.Sleep(retryWait); // Sleep x seconds
+                            continue; // run loop again
+                        }
+                        else
+                        {
+                            throw e;
+                        }
                     }
                 }
                 catch (Exception e)
                 {
-                    Logger.Error("Failed to create items on the server : "  + e.Message,e);
-                    FailedMessageCount += itemBuffer.Count;
+                    // This exception means something happened on the server, we try again MaxRetryOnUnknownError times, then fail
+                    if (tryCount > MaxRetryOnUnknownError)
+                    {
+                        Logger.Error("Failed to create items on the server : " + e.Message, e);
+                        foreach (var item in itemBuffer)
+                        {
+                            Logger.Error("Gave up on inserting [" + item.MsgDescriptor.Subject + "] into " + _username + "@" + _hostname + "/" +
+                                         previousFolder);
+                        }
+                        FailedMessageCount += itemBuffer.Count;
+                    }
+                    else
+                    {
+                        Logger.Warn("Failed to create items on server, trying " + (MaxRetryOnUnknownError - tryCount) + " more times : " +
+                                    e.Message);
+                        Thread.Sleep(30000); // sleep 30 second
+                        continue; // run loop again
+                    }
                 }
-                ProcessedMessageCount += itemBuffer.Count;
+                ProcessedMessageCount += itemBuffer.Count - retryItems.Count;
                 itemBuffer.Clear();
                 bufferedSize = 0;
-            }
-            else
-            {
-                Logger.Debug("No messages to commit");
+                // if there are retry items, we need to put them back in the buffer
+                if (retryItems.Count > 0)
+                {
+                    Logger.Info("Will retry " + retryItems.Count + " items, will wait for 30s before retrying.");
+                    itemBuffer.AddRange(retryItems);
+                    bufferedSize = retryItems.Sum(m => m.MsgDescriptor.RawMessage.Length);
+                    Thread.Sleep(30000); // wait 30 seconds before retrying
+                }
             }
         }
 
@@ -311,6 +413,44 @@ namespace Zinkuba.MailModule.MessageProcessor
             {
                 MimeContent = new MimeContent("UTF-8", Encoding.UTF8.GetBytes(msg.RawMessage))
             };
+            if (msg.DestinationFolder.Equals("Sent Items"))
+            {
+                // we need to set a sent date property otherwise dates don't show up properly in exchange
+                DateTime? sentDate = msg.SentDateTime;
+                if (sentDate == null)
+                {
+                    var match = Regex.Match(headersString, @"Date: (.*)");
+                    if (match.Success)
+                    {
+                        try
+                        {
+                            sentDate = DateTime.Parse(match.Groups[1].Value);
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.Error("Failed to parse header date " + match.Groups[1] + " to a date for sending.");
+                        }
+                    }
+                }
+                if (sentDate == null)
+                {
+                    Logger.Error("Failed to set sent date on " + msg.Subject);
+                }
+                else
+                {
+                    try
+                    {
+                        item.SetExtendedProperty(ExchangeHelper.MsgPropertyDateTimeSent,
+                            sentDate.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"));
+                        item.SetExtendedProperty(ExchangeHelper.MsgPropertyDateTimeReceived,
+                            sentDate.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"));
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Error("Failed to set sent item date on " + msg.Subject + " to " + sentDate, e);
+                    }
+                }
+            }
 
             String folder = msg.DestinationFolder;
 
@@ -381,21 +521,32 @@ namespace Zinkuba.MailModule.MessageProcessor
                 }
                 catch (Exception e)
                 {
-                    Logger.Warn("Failed to set flag on " + folder + @"\" + item.Subject + ", ignoring flag.", e);
+                    Logger.Warn("Failed to set flag on " + folder + @"\" + msg.Subject + ", ignoring flag.", e);
                 }
             }
 
             if (msg.FlagIcon != FlagIcon.None)
             {
-                item.SetExtendedProperty(ExchangeHelper.PidTagFlagStatus,2);
-                item.SetExtendedProperty(ExchangeHelper.PidTagFollowupIcon, ExchangeHelper.ConvertFlag(msg.FlagIcon));
+                item.SetExtendedProperty(ExchangeHelper.PidTagFlagStatus, 2);
+                item.SetExtendedProperty(ExchangeHelper.PidTagFollowupIcon, ExchangeHelper.ConvertFlagIcon(msg.FlagIcon));
+            }
+
+            if (service.RequestedServerVersion == ExchangeVersion.Exchange2013 && msg.FollowUpFlag != null)
+            {
+                item.Flag = new Flag()
+                {
+                    DueDate = msg.FollowUpFlag.DueDateTime,
+                    StartDate = msg.FollowUpFlag.StartDateTime,
+                    CompleteDate = msg.FollowUpFlag.CompleteDateTime,
+                    FlagStatus = ExchangeHelper.ConvertFlagStatus(msg.FollowUpFlag.Status),
+                };
             }
 
             try
             {
                 if (!msg.Flags.Contains(MessageFlags.Draft))
                 {
-                    item.SetExtendedProperty(ExchangeHelper.PR_MESSAGE_FLAGS_msgflag_read, 1);
+                    item.SetExtendedProperty(ExchangeHelper.MsgFlagRead, 1);
                 }
                 if (msg.Importance != null) item.Importance = (Importance)msg.Importance;
                 if (msg.Sensitivity != null) item.Sensitivity = (Sensitivity)msg.Sensitivity;
@@ -405,7 +556,7 @@ namespace Zinkuba.MailModule.MessageProcessor
             catch (Exception e)
             {
                 Logger.Warn(
-                    "Failed to set metadata on " + folder + @"\" + item.Subject + ", ignoring metadata.", e);
+                    "Failed to set metadata on " + folder + @"\" + msg.Subject + ", ignoring metadata.", e);
             }
 
             return item;
@@ -482,5 +633,11 @@ namespace Zinkuba.MailModule.MessageProcessor
         }
 
         public List<string> ImportedIds { get; private set; }
+    }
+
+    public class ExchangeItemContainer
+    {
+        public Item ExchangeItem;
+        public RawMessageDescriptor MsgDescriptor;
     }
 }

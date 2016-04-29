@@ -1,7 +1,7 @@
 ﻿<Window x:Class="Zinkuba.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Zinkuba.App" Height="600" Width="750" MinHeight="350" MinWidth="650"
+        Title="Zinkuba.App" Height="600" Width="900" MinHeight="350" MinWidth="650"
         >
     <Grid>
         <Grid Margin="10">

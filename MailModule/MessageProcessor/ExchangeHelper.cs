@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using log4net;
 using Microsoft.Exchange.WebServices.Data;
 using Zinkuba.MailModule.API;
@@ -12,10 +13,12 @@ namespace Zinkuba.MailModule.MessageProcessor
     internal class ExchangeHelper
     {
         private static readonly ILog Logger = LogManager.GetLogger(typeof(ExchangeHelper));
-        internal static ExtendedPropertyDefinition ContentTypeProperty = new ExtendedPropertyDefinition(DefaultExtendedPropertySet.InternetHeaders, "Content-Type", MapiPropertyType.String);
+        internal static ExtendedPropertyDefinition MsgPropertyContentType = new ExtendedPropertyDefinition(DefaultExtendedPropertySet.InternetHeaders, "Content-Type", MapiPropertyType.String);
         internal static ExtendedPropertyDefinition PidTagFollowupIcon = new ExtendedPropertyDefinition(0x1095, MapiPropertyType.Integer);
         internal static ExtendedPropertyDefinition PidTagFlagStatus = new ExtendedPropertyDefinition(0x1090, MapiPropertyType.Integer);
-        internal static ExtendedPropertyDefinition PR_MESSAGE_FLAGS_msgflag_read = new ExtendedPropertyDefinition(3591, MapiPropertyType.Integer);
+        internal static ExtendedPropertyDefinition MsgPropertyDateTimeSent = new ExtendedPropertyDefinition(0x0039, MapiPropertyType.SystemTime);
+        internal static ExtendedPropertyDefinition MsgPropertyDateTimeReceived = new ExtendedPropertyDefinition(0x0e06, MapiPropertyType.SystemTime);
+        internal static ExtendedPropertyDefinition MsgFlagRead = new ExtendedPropertyDefinition(3591, MapiPropertyType.Integer);
 
         internal static readonly ExchangeVersion[] ExchangeVersions = { ExchangeVersion.Exchange2013, ExchangeVersion.Exchange2010_SP2, ExchangeVersion.Exchange2010_SP1, ExchangeVersion.Exchange2010, ExchangeVersion.Exchange2007_SP1 };
 
@@ -32,7 +35,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                     {
                         Credentials = new WebCredentials(username, password),
                         Url = new Uri("https://" + hostname + "/EWS/Exchange.asmx"),
-                        Timeout = 30*60*1000, // 30 mins
+                        Timeout = 30 * 60 * 1000, // 30 mins
                     };
                     Logger.Debug("Binding to exchange server " + exchangeService.Url + " as " + username + ", version " +
                                  ExchangeHelper.ExchangeVersions[attempt]);
@@ -64,11 +67,11 @@ namespace Zinkuba.MailModule.MessageProcessor
             return exchangeService;
         }
 
-        public static FlagIcon ConvertFlag(int flag)
+        public static FlagIcon ConvertFlagIcon(int flag)
         {
             switch (flag)
             {
-                case 1 : return FlagIcon.Outlook2003Purple;
+                case 1: return FlagIcon.Outlook2003Purple;
                 case 2: return FlagIcon.Outlook2003Orange;
                 case 3: return FlagIcon.Outlook2003Green;
                 case 4: return FlagIcon.Outlook2003Yellow;
@@ -77,7 +80,7 @@ namespace Zinkuba.MailModule.MessageProcessor
             }
         }
 
-        public static int ConvertFlag(FlagIcon flag)
+        public static int ConvertFlagIcon(FlagIcon flag)
         {
             switch (flag)
             {
@@ -90,6 +93,25 @@ namespace Zinkuba.MailModule.MessageProcessor
             }
         }
 
+        public static ItemFlagStatus ConvertFlagStatus(FollowUpFlagStatus status)
+        {
+            switch (status)
+            {
+                case FollowUpFlagStatus.Complete: return ItemFlagStatus.Complete;
+                case FollowUpFlagStatus.Flagged: return ItemFlagStatus.Flagged;
+                default: return ItemFlagStatus.NotFlagged;
+            }
+        }
+
+        public static FollowUpFlagStatus ConvertFlagStatus(ItemFlagStatus status)
+        {
+            switch (status)
+            {
+                case ItemFlagStatus.Complete: return FollowUpFlagStatus.Complete;
+                case ItemFlagStatus.Flagged: return FollowUpFlagStatus.Flagged;
+                default: return FollowUpFlagStatus.NotFlagged;
+            }
+        }
 
         private static bool CertificateValidationCallBack(
             object sender,
@@ -146,9 +168,10 @@ namespace Zinkuba.MailModule.MessageProcessor
                 // untrusted root errors for self-signed certificates. These certificates are valid
                 // for default Exchange server installations, so return true.
                 return true;
-            } else if ((sslPolicyErrors & System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch) != 0)
+            }
+            else if ((sslPolicyErrors & System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch) != 0)
             {
-               // Certificate name is not correct, we don't care
+                // Certificate name is not correct, we don't care
                 return true;
             }
             else
@@ -157,8 +180,37 @@ namespace Zinkuba.MailModule.MessageProcessor
                 return false;
             }
         }
+        /*
+        public static bool SetProperty(EmailMessage message, PropertyDefinition propertyDefinition, object value)
+        {
+            if (message == null)
+                return false;
+            // get value of PropertyBag property — that is wrapper
+            // over dictionary of inner message’s properties
+            var members = message.GetType().FindMembers(MemberTypes.Property, BindingFlags.NonPublic | BindingFlags.Instance, PartialName, "PropertyBag");
+            if (members.Length < 1)
+                return false;
 
+            var propertyInfo = members[0] as PropertyInfo;
+            if (propertyInfo == null)
+                return false;
 
+            var bag = propertyInfo.GetValue(message, null);
+            members = bag.GetType().FindMembers(MemberTypes.Property, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance, PartialName, "Properties");
+
+            if (members.Length < 1)
+                return false;
+
+            // get dictionary of properties values
+            var properties = ((PropertyInfo)members[0]).GetMethod.Invoke(bag, null);
+            var dictionary = properties as Dictionary<PropertyDefinition, object>;
+            if (dictionary == null)
+                return false;
+            dictionary[propertyDefinition] = value;
+
+            return true;
+        }
+        */
         public static void GetFolderSummary(ExchangeService service, List<ExchangeFolder> folderStore, DateTime startDate, DateTime endDate, bool purgeIgnored = true)
         {
             SearchFilter.SearchFilterCollection filter = new SearchFilter.SearchFilterCollection();
@@ -193,7 +245,7 @@ namespace Zinkuba.MailModule.MessageProcessor
             }
         }
 
-        public static void GetAllFolders(ExchangeService service, ExchangeFolder currentFolder, List<ExchangeFolder> folderStore, bool skipEmpty = true)
+        public static void GetAllSubFolders(ExchangeService service, ExchangeFolder currentFolder, List<ExchangeFolder> folderStore, bool skipEmpty = true)
         {
             Logger.Debug("Looking for sub folders of '" + currentFolder.FolderPath + "'");
             var results = service.FindFolders(currentFolder.Folder.Id, new FolderView(int.MaxValue));
@@ -218,7 +270,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                 folderStore.Add(exchangeFolder);
                 if (exchangeFolder.Folder.ChildFolderCount > 0)
                 {
-                    GetAllFolders(service, exchangeFolder, folderStore, skipEmpty);
+                    GetAllSubFolders(service, exchangeFolder, folderStore, skipEmpty);
                 }
             }
         }

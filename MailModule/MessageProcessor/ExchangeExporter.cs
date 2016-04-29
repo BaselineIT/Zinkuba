@@ -2,11 +2,14 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO.Ports;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using log4net;
 using Microsoft.Exchange.WebServices.Data;
+using Microsoft.Office.Interop.Outlook;
 using Zinkuba.MailModule.API;
 using Zinkuba.MailModule.MessageDescriptor;
 using Exception = System.Exception;
@@ -23,6 +26,7 @@ namespace Zinkuba.MailModule.MessageProcessor
         private readonly string _hostname;
         private readonly DateTime _startDate;
         private readonly DateTime _endDate;
+        private readonly List<string> _mailboxList;
         private Thread _sourceThread;
         private ExchangeService service;
         private List<ExchangeFolder> folders;
@@ -46,13 +50,14 @@ namespace Zinkuba.MailModule.MessageProcessor
             if (handler != null) handler(this, EventArgs.Empty);
         }
 
-        public ExchangeExporter(String username, String password, String hostname, DateTime startDate, DateTime endDate)
+        public ExchangeExporter(String username, String password, String hostname, DateTime startDate, DateTime endDate, List<String> mailboxList)
         {
             _username = username;
             _password = password;
             _hostname = hostname;
             _startDate = startDate;
             _endDate = endDate;
+            _mailboxList = (mailboxList == null || mailboxList.Count == 0) ? null : mailboxList;
             Name = username;
         }
 
@@ -62,14 +67,48 @@ namespace Zinkuba.MailModule.MessageProcessor
             NextReader.Initialise();
             service = ExchangeHelper.ExchangeConnect(_hostname, _username, _password);
             folders = new List<ExchangeFolder>();
-            ExchangeHelper.GetAllFolders(service, new ExchangeFolder() { Folder = Folder.Bind(service, WellKnownFolderName.MsgFolderRoot) }, folders, false);
+            ExchangeHelper.GetAllSubFolders(service,
+                new ExchangeFolder() { Folder = Folder.Bind(service, WellKnownFolderName.MsgFolderRoot) }, folders,
+                false);
+            if (_mailboxList != null)
+            {
+                var newFolders = new List<ExchangeFolder>();
+                foreach (var mailbox in _mailboxList)
+                {
+                    var mailboxMatch = mailbox.ToLower().Replace('/', '\\'); ;
+                    newFolders.AddRange(folders.Where(folder => folder.FolderPath.ToLower().Equals(mailboxMatch)));
+                }
+                folders = newFolders;
+            }/*
+            else
+            {
+                var view = new FolderView(Int32.MaxValue) {Traversal = FolderTraversal.Shallow};
+                foreach (var mailbox in _mailboxList)
+                {
+                    FindFoldersResults findFoldersResults = service.FindFolders(WellKnownFolderName.MsgFolderRoot, view);
+                    foreach (Folder f in findFoldersResults)
+                    {
+                        if (f.DisplayName.Equals(mailbox))
+                        {
+                            var exchangeFolder = new ExchangeFolder()
+                            {
+                                Folder = f,
+                                FolderPath = f.DisplayName,
+                                MessageCount = f.TotalCount,
+                                FolderId = f.Id,
+                            };
+                            folders.Add(exchangeFolder);
+                        }
+                    }
+                }
+            }*/
             ExchangeHelper.GetFolderSummary(service, folders, _startDate, _endDate);
             folders.ForEach(folder => TotalMessages += !TestOnly ? folder.MessageCount : (folder.MessageCount > 20 ? 20 : folder.MessageCount));
             Logger.Debug("Found " + folders.Count + " folders and " + TotalMessages + " messages.");
             Status = MessageProcessorStatus.Initialised;
             Logger.Info("ExchangeExporter Initialised");
         }
-       
+
 
         public Type OutMessageDescriptorType()
         {
@@ -92,9 +131,10 @@ namespace Zinkuba.MailModule.MessageProcessor
                     EmailMessageSchema.IsRead,
                     EmailMessageSchema.IsReadReceiptRequested,
                     EmailMessageSchema.IsDeliveryReceiptRequested,
-                    EmailMessageSchema.Id,
+                    ItemSchema.DateTimeSent,
+                    ItemSchema.DateTimeReceived,
+                    ItemSchema.DateTimeCreated,
                     ItemSchema.ItemClass,
-                    ItemSchema.Subject,
                     ItemSchema.MimeContent,
                     ItemSchema.Categories,
                     ItemSchema.Importance,
@@ -107,7 +147,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                     ItemSchema.Sensitivity,
                     ItemSchema.Subject,
                     ItemSchema.Id,
-                    ExchangeHelper.ContentTypeProperty,
+                    ExchangeHelper.MsgPropertyContentType,
                     ExchangeHelper.PidTagFollowupIcon,
                 };
                 if (service.RequestedServerVersion != ExchangeVersion.Exchange2007_SP1)
@@ -225,60 +265,118 @@ namespace Zinkuba.MailModule.MessageProcessor
                                     } while (!success);
                                     foreach (var emailMessage in emails)
                                     {
-                                        Logger.Debug("Exporting " + emailMessage.Id.UniqueId + " from " + exchangeFolder.FolderPath + " : " + emailMessage.Subject);
-                                        var flags = new Collection<MessageFlags>();
-                                        Boolean flag;
-                                        if (emailMessage.TryGetProperty(EmailMessageSchema.IsRead, out flag) && !flag) flags.Add(MessageFlags.Unread);
-                                        if (emailMessage.TryGetProperty(ItemSchema.IsDraft, out flag) && flag) flags.Add(MessageFlags.Draft);
-                                        if (emailMessage.TryGetProperty(EmailMessageSchema.IsReadReceiptRequested, out flag) && flag) flags.Add(MessageFlags.ReadReceiptRequested);
-                                        if (emailMessage.TryGetProperty(EmailMessageSchema.IsDeliveryReceiptRequested, out flag) && flag) flags.Add(MessageFlags.DeliveryReceiptRequested);
-                                        if (emailMessage.TryGetProperty(ItemSchema.IsReminderSet, out flag) && flag) flags.Add(MessageFlags.ReminderSet);
-                                        if (emailMessage.TryGetProperty(ItemSchema.IsAssociated, out flag) && flag) flags.Add(MessageFlags.Associated);
-                                        if (emailMessage.TryGetProperty(ItemSchema.IsFromMe, out flag) && flag) flags.Add(MessageFlags.FromMe);
-                                        if (emailMessage.TryGetProperty(ItemSchema.IsResend, out flag) && flag) flags.Add(MessageFlags.Resend);
-                                        var message = new RawMessageDescriptor
+                                        try
                                         {
-                                            SourceId = emailMessage.Id.UniqueId,
-                                            RawMessage = Encoding.UTF8.GetString(emailMessage.MimeContent.Content),
-                                            Flags = flags,
-                                            SourceFolder = exchangeFolder.FolderPath,
-                                            DestinationFolder = exchangeFolder.MappedDestination,
-                                            ItemClass = emailMessage.ItemClass
-                                        };
-                                        Object result;
-                                        if (emailMessage.TryGetProperty(ItemSchema.IconIndex, out result) && result != null) message.IconIndex = (int)emailMessage.IconIndex;
-                                        if (emailMessage.TryGetProperty(ItemSchema.Importance, out result) && result != null) message.Importance = (int)emailMessage.Importance;
-                                        if (emailMessage.TryGetProperty(ItemSchema.Sensitivity, out result) && result != null) message.Sensitivity = (int)emailMessage.Sensitivity;
-                                        if (emailMessage.TryGetProperty(ItemSchema.InReplyTo, out result) && result != null) message.InReplyTo = emailMessage.InReplyTo;
-                                        if (emailMessage.TryGetProperty(ItemSchema.ConversationId, out result) && result != null) message.ConversationId = emailMessage.ConversationId.ChangeKey;
-                                        if (emailMessage.TryGetProperty(ItemSchema.ReminderDueBy, out result) && result != null) message.ReminderDueBy = emailMessage.ReminderDueBy;
-                                        if (emailMessage.TryGetProperty(ExchangeHelper.PidTagFollowupIcon, out result) && result != null) message.FlagIcon = ExchangeHelper.ConvertFlag((int)result);
-                                        if (emailMessage.TryGetProperty(ItemSchema.Categories, out result) && result != null && emailMessage.Categories.Count > 0)
-                                        {
-                                            foreach (var category in emailMessage.Categories)
+                                            String subject;
+                                            if (!emailMessage.TryGetProperty(ItemSchema.Subject, out subject) ||
+                                                subject == null)
                                             {
-                                                message.Categories.Add(category);
+                                                 Logger.Warn("Item " + emailMessage.Id.UniqueId + " has no subject assigned, unable to determine subject.");
                                             }
-                                        }
-                                        if (NextReader.Status == MessageProcessorStatus.Idle)
-                                        {
-                                            NextReader.Initialise();
-                                        }
-                                        if (emailMessage.ExtendedProperties != null)
-                                        {
-                                            foreach (var extendedProperty in emailMessage.ExtendedProperties)
+                                            Logger.Debug("Exporting " + emailMessage.Id.UniqueId + " from " + exchangeFolder.FolderPath + " : " + subject);
+                                            var flags = new Collection<MessageFlags>();
+                                            Boolean flag;
+                                            if (emailMessage.TryGetProperty(EmailMessageSchema.IsRead, out flag) &&
+                                                !flag) flags.Add(MessageFlags.Unread);
+                                            if (emailMessage.TryGetProperty(ItemSchema.IsDraft, out flag) && flag)
+                                                flags.Add(MessageFlags.Draft);
+                                            if (
+                                                emailMessage.TryGetProperty(EmailMessageSchema.IsReadReceiptRequested,
+                                                    out flag) && flag) flags.Add(MessageFlags.ReadReceiptRequested);
+                                            if (
+                                                emailMessage.TryGetProperty(
+                                                    EmailMessageSchema.IsDeliveryReceiptRequested, out flag) && flag)
+                                                flags.Add(MessageFlags.DeliveryReceiptRequested);
+                                            if (emailMessage.TryGetProperty(ItemSchema.IsReminderSet, out flag) && flag)
+                                                flags.Add(MessageFlags.ReminderSet);
+                                            if (emailMessage.TryGetProperty(ItemSchema.IsAssociated, out flag) && flag)
+                                                flags.Add(MessageFlags.Associated);
+                                            if (emailMessage.TryGetProperty(ItemSchema.IsFromMe, out flag) && flag)
+                                                flags.Add(MessageFlags.FromMe);
+                                            if (emailMessage.TryGetProperty(ItemSchema.IsResend, out flag) && flag)
+                                                flags.Add(MessageFlags.Resend);
+                                            var message = new RawMessageDescriptor
                                             {
-                                                if (extendedProperty.PropertyDefinition.Equals(ExchangeHelper.ContentTypeProperty))
+                                                SourceId = emailMessage.Id.UniqueId,
+                                                Subject = subject,
+                                                Flags = flags,
+                                                RawMessage = "",
+                                                SourceFolder = exchangeFolder.FolderPath,
+                                                DestinationFolder = exchangeFolder.MappedDestination,
+                                            };
+                                            Object result;
+                                            if (emailMessage.TryGetProperty(ItemSchema.MimeContent, out result) &&
+                                                result != null)
+                                                message.RawMessage = Encoding.UTF8.GetString(emailMessage.MimeContent.Content);
+                                            if (emailMessage.TryGetProperty(ItemSchema.ItemClass, out result) &&
+                                                result != null) message.ItemClass = emailMessage.ItemClass;
+                                            if (emailMessage.TryGetProperty(ItemSchema.IconIndex, out result) &&
+                                                result != null) message.IconIndex = (int)emailMessage.IconIndex;
+                                            if (emailMessage.TryGetProperty(ItemSchema.Importance, out result) &&
+                                                result != null) message.Importance = (int)emailMessage.Importance;
+                                            if (emailMessage.TryGetProperty(ItemSchema.Sensitivity, out result) &&
+                                                result != null) message.Sensitivity = (int)emailMessage.Sensitivity;
+                                            if (emailMessage.TryGetProperty(ItemSchema.InReplyTo, out result) &&
+                                                result != null) message.InReplyTo = emailMessage.InReplyTo;
+                                            if (emailMessage.TryGetProperty(ItemSchema.ConversationId, out result) &&
+                                                result != null)
+                                                message.ConversationId = emailMessage.ConversationId.ChangeKey;
+                                            if (emailMessage.TryGetProperty(ItemSchema.ReminderDueBy, out result) &&
+                                                result != null) message.ReminderDueBy = emailMessage.ReminderDueBy;
+                                            if (
+                                                emailMessage.TryGetProperty(ExchangeHelper.PidTagFollowupIcon,
+                                                    out result) && result != null)
+                                                message.FlagIcon = ExchangeHelper.ConvertFlagIcon((int)result);
+                                            if (emailMessage.TryGetProperty(ItemSchema.DateTimeReceived, out result) &&
+                                                result != null)
+                                                message.ReceivedDateTime = emailMessage.DateTimeReceived;
+                                            if (emailMessage.TryGetProperty(ItemSchema.DateTimeSent, out result) &&
+                                                result != null) message.SentDateTime = emailMessage.DateTimeSent;
+                                            if (emailMessage.TryGetProperty(ItemSchema.Flag, out result) &&
+                                                result != null)
+                                                message.FollowUpFlag = new FollowUpFlag()
                                                 {
-                                                    if (extendedProperty.Value.ToString().Contains("signed-data"))
+                                                    StartDateTime = ((Flag)result).StartDate,
+                                                    DueDateTime = ((Flag)result).DueDate,
+                                                    CompleteDateTime = ((Flag)result).CompleteDate,
+                                                    Status =
+                                                        ExchangeHelper.ConvertFlagStatus(((Flag)result).FlagStatus),
+                                                };
+                                            if (emailMessage.TryGetProperty(ItemSchema.Categories, out result) &&
+                                                result != null && emailMessage.Categories.Count > 0)
+                                            {
+                                                foreach (var category in emailMessage.Categories)
+                                                {
+                                                    message.Categories.Add(category);
+                                                }
+                                            }
+                                            if (NextReader.Status == MessageProcessorStatus.Idle)
+                                            {
+                                                NextReader.Initialise();
+                                            }
+                                            if (emailMessage.ExtendedProperties != null)
+                                            {
+                                                foreach (var extendedProperty in emailMessage.ExtendedProperties)
+                                                {
+                                                    if (
+                                                        extendedProperty.PropertyDefinition.Equals(
+                                                            ExchangeHelper.MsgPropertyContentType))
                                                     {
-                                                        message.IsEncrypted = true;
+                                                        if (extendedProperty.Value.ToString().Contains("signed-data"))
+                                                        {
+                                                            message.IsEncrypted = true;
+                                                        }
                                                     }
                                                 }
                                             }
+                                            NextReader.Process(message);
+                                            SucceededMessageCount++;
                                         }
-                                        NextReader.Process(message);
-                                        SucceededMessageCount++;
+                                        catch (Exception e)
+                                        {
+                                            Logger.Error("Failed to load properties for message " + emailMessage.Id.UniqueId, e);
+                                            FailedMessageCount++;
+                                        }
                                     }
                                 }
                                 catch (Exception e)

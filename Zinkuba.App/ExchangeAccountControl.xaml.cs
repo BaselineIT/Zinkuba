@@ -80,7 +80,7 @@ namespace Zinkuba.App
     {
         private readonly ExchangeAccount _account;
         public AuthenticatedMailboxList Mailboxes { get; set; }
-
+        public String LimitSingleFolder { get { return _account.LimitFolder; } set { _account.LimitFolder = value; OnPropertyChanged("LimitSingleFolder"); } }
 
         public String Server
         {
