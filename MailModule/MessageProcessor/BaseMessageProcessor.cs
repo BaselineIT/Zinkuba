@@ -96,6 +96,6 @@ namespace Zinkuba.MailModule.MessageProcessor
             if (handler != null) handler(this, EventArgs.Empty);
         }
         public bool Running { get { return Status == MessageProcessorStatus.Started || Status == MessageProcessorStatus.Initialising; } }
-        public bool Failed { get { return Status == MessageProcessorStatus.AuthFailure || Status == MessageProcessorStatus.ConnectionError || Status == MessageProcessorStatus.UnknownError; } }
+        public bool Failed { get { return Status == MessageProcessorStatus.AuthFailure || Status == MessageProcessorStatus.DestinationAuthFailure || Status == MessageProcessorStatus.SourceAuthFailure || Status == MessageProcessorStatus.ConnectionError || Status == MessageProcessorStatus.UnknownError; } }
     }
 }

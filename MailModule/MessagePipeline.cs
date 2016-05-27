@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using log4net;
 using Zinkuba.MailModule.API;
 using Zinkuba.MailModule.MessageDescriptor;
@@ -7,7 +8,6 @@ using Zinkuba.MailModule.MessageProcessor;
 
 namespace Zinkuba.MailModule
 {
-
     public class MessagePipeline
     {
         private readonly List<IMessageProcessor> _messageProcessors;
@@ -82,8 +82,11 @@ namespace Zinkuba.MailModule
             IMessageWriter previousWriter = null;
             foreach (var messageProcessor in messageProcessors)
             {
+                // Count failed messages for every processor
                 messageProcessor.FailedMessage += (sender, args) => MessageFailed(messageProcessor.FailedMessageCount);
+                // Count ignored messages for every processor
                 messageProcessor.IgnoredMessage += (sender, args) => MessageIgnored(messageProcessor.IgnoredMessageCount);
+                // check Status for every processor
                 messageProcessor.StatusChanged += MessageProcessorOnStatusChanged;
                 //var messageWriter = messageProcessor as IMessageWriter;
                 if (previousWriter != null)
@@ -100,7 +103,7 @@ namespace Zinkuba.MailModule
                 }
                 previousWriter = messageProcessor as IMessageWriter;
             }
-            // Listen on success messge of last item
+            // Listen on success message of last item
             messageProcessors[messageProcessors.Count - 1].SucceededMessage += (sender, args) => MessageExported(messageProcessors[messageProcessors.Count - 1].SucceededMessageCount);
             // listen on Total messages of first item
             ((IMessageSource)messageProcessors[0]).TotalMessagesChanged += OnTotalMessagesChanged;
@@ -126,6 +129,33 @@ namespace Zinkuba.MailModule
             {
                 if (!Failed)
                 {
+                    if (processor == _messageProcessors[0])
+                    // first processor
+                    {
+                        // First processor indicates start, not stop
+                        if (processor.Status == MessageProcessorStatus.Completed) return;
+                        if (processor.Status == MessageProcessorStatus.AuthFailure)
+                        {
+                            State = MessageProcessorStatus.SourceAuthFailure;
+                            return;
+                        }
+                    }
+                    else if (processor == _messageProcessors[_messageProcessors.Count - 1])
+                    // last processor
+                    {
+                        if (processor.Status == MessageProcessorStatus.Started) return;
+                        if (processor.Status == MessageProcessorStatus.AuthFailure)
+                        {
+                            State = MessageProcessorStatus.DestinationAuthFailure;
+                            return;
+                        }
+                    }
+                    else
+                    // intermediary processors
+                    {
+                        if (processor.Status == MessageProcessorStatus.Started) return;
+                        if (processor.Status == MessageProcessorStatus.Completed) return;
+                    }
                     State = processor.Status;
                 }
             }
@@ -147,7 +177,7 @@ namespace Zinkuba.MailModule
         }
 
         public bool Running { get { return State == MessageProcessorStatus.Started || State == MessageProcessorStatus.Initialising; } }
-        public bool Failed { get { return State == MessageProcessorStatus.AuthFailure || State == MessageProcessorStatus.ConnectionError || State == MessageProcessorStatus.UnknownError; } }
+        public bool Failed { get { return State == MessageProcessorStatus.AuthFailure || State == MessageProcessorStatus.DestinationAuthFailure || State == MessageProcessorStatus.SourceAuthFailure || State == MessageProcessorStatus.ConnectionError || State == MessageProcessorStatus.UnknownError; } }
         public bool TestOnly { get; set; }
 
         public void Start()

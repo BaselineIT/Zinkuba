@@ -23,7 +23,7 @@ namespace Zinkuba.App.Mailbox
         
         public String ProgressText
         {
-            get { return Exporter == null ? "" : (Exporter.State == MessageProcessorStatus.Started ? "" + _progress + "%" : Exporter.State.ToString()); }
+            get { return Exporter == null ? "Ready" : (Exporter.State == MessageProcessorStatus.Started ? "" + _progress + "%" : Exporter.State.ToString()); }
         }
 
         public int IgnoredMails { get; set; }

@@ -22,5 +22,6 @@ namespace Zinkuba.App.MailAccount
             _mailboxes.CollectionChanged += MailboxesOnCollectionChanged;
         }
 
+        public bool Gmail { get; set; }
     }
 }

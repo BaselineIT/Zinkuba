@@ -104,6 +104,17 @@ namespace Zinkuba.App
             set { _account.UseSsl = value; OnPropertyChanged("SSL"); }
         }
 
+        public bool Gmail
+        {
+            get { return _account.Gmail; }
+            set
+            {
+                if (value.Equals(_account.Gmail)) return;
+                _account.Gmail = value;
+                OnPropertyChanged("Gmail");
+            }
+        }
+
         public ImapAccountDataContext(ImapAccount account, Action<AuthenticatedMailbox> removeMailboxAction)
         {
             _account = account;

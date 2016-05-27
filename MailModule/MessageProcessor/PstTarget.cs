@@ -82,9 +82,10 @@ namespace Zinkuba.MailModule.MessageProcessor
 
         public void Process(MsgDescriptor message)
         {
-            if (Status == MessageProcessorStatus.Started || Status == MessageProcessorStatus.Initialised)
-            {
+            if (Status == MessageProcessorStatus.Initialised)
                 Status = MessageProcessorStatus.Started;
+            if (Status == MessageProcessorStatus.Started)
+            {
                 _queue.Consume(message);
             }
             else

@@ -115,9 +115,10 @@ namespace Zinkuba.MailModule.MessageProcessor
 
         public void Process(RawMessageDescriptor messageDescriptor)
         {
-            if (Status == MessageProcessorStatus.Started || Status == MessageProcessorStatus.Initialised)
-            {
+            if (Status == MessageProcessorStatus.Initialised)
                 Status = MessageProcessorStatus.Started;
+            if (Status == MessageProcessorStatus.Started)
+            {
                 // limit the size of the queue
                 while (_queue.Count > 150)
                 {

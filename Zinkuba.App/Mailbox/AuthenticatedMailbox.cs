@@ -37,7 +37,10 @@ namespace Zinkuba.App.Mailbox
             if(_account is ExchangeAccount)
                 return new ExchangeExporter(Username,Password,_account.Server,_account.StartDate,_account.EndDate.AddDays(1), String.IsNullOrWhiteSpace(_account.LimitFolder) ? null : new List<string>() { _account.LimitFolder });
             if (_account is ImapAccount)
-                return new ImapExporter(Username, Password, _account.Server, _account.StartDate, _account.EndDate.AddDays(1), ((ImapAccount)_account).UseSsl, String.IsNullOrWhiteSpace(_account.LimitFolder) ? null : new List<string>() { _account.LimitFolder });
+                return new ImapExporter(Username, Password, _account.Server, _account.StartDate, _account.EndDate.AddDays(1), ((ImapAccount)_account).UseSsl, String.IsNullOrWhiteSpace(_account.LimitFolder) ? null : new List<string>() { _account.LimitFolder })
+                {
+                    Provider = ((ImapAccount)_account).Gmail ? MailProvider.GmailImap : MailProvider.DefaultImap,
+                };
             throw new Exception("Unknown Account");
         }
 

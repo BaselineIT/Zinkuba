@@ -6,7 +6,9 @@ namespace Zinkuba.MailModule.API
     {
         Idle, Initialising, Started, AuthFailure, Completed, UnknownError, Cancelled,
         ConnectionError,
-        Initialised
+        Initialised,
+        SourceAuthFailure,
+        DestinationAuthFailure,
     }
 
     public interface IMessageProcessor

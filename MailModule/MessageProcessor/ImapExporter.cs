@@ -143,7 +143,7 @@ namespace Zinkuba.MailModule.MessageProcessor
             catch (InvalidCredentialsException ex)
             {
                 Logger.Error("Imap Runner for " + _username + " [********] to " + _server + " failed : " + ex.Message,ex);
-                throw new MessageProcessorException("Imap Runner for " + _username + " [********] to " + _server + " failed : " + ex.Message) { Status = MessageProcessorStatus.AuthFailure };
+                throw new MessageProcessorException("Imap Runner for " + _username + " [********] to " + _server + " failed : " + ex.Message) { Status = MessageProcessorStatus.SourceAuthFailure };
             }
             catch (SocketException ex)
             {
