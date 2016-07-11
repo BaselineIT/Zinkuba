@@ -28,7 +28,7 @@ namespace Zinkuba.App.Mailbox
 
         public int IgnoredMails { get; set; }
         public int FailedMails { get; set; }
-        public int ExportedMails { get; set; }
+        public int SucceededMails { get; set; }
 
         public int Progress
         {
@@ -41,7 +41,7 @@ namespace Zinkuba.App.Mailbox
                     OnPropertyChanged("Progress");
                     OnPropertyChanged("ProgressText");
                 }
-                OnPropertyChanged("ExportedMails");
+                OnPropertyChanged("SucceededMails");
                 OnPropertyChanged("FailedMails");
                 OnPropertyChanged("IgnoredMails");
             }

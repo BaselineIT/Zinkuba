@@ -81,6 +81,7 @@
     <Compile Include="PCQueue.cs" />
     <Compile Include="PCState.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Util.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\S22.Imap\S22.Imap.csproj">

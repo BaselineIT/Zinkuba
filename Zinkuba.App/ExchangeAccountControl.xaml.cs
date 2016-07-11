@@ -88,6 +88,12 @@ namespace Zinkuba.App
             set { _account.Server = value; }
         }
 
+        public bool IncludePublicFolders
+        {
+            get { return _account.IncludePublicFolders; }
+            set { _account.IncludePublicFolders = value; OnPropertyChanged("IncludePublicFolders"); }
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         public ExchangeAccountDataContext(ExchangeAccount account, Action<AuthenticatedMailbox> removeMailboxAction)

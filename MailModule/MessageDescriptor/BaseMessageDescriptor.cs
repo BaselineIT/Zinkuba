@@ -57,6 +57,7 @@ namespace Zinkuba.MailModule.MessageDescriptor
         public FlagIcon FlagIcon { get; set; }
         public string Subject { get; set; }
         public string ItemClass { get; set; }
+        public bool IsPublicFolder { get; set; }
 
         public Collection<string> Categories = new Collection<string>();
         public String ConversationId { get; set; }

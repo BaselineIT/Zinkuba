@@ -32,7 +32,7 @@ namespace Zinkuba.App
         private void MailboxOnExportStarted(object sender, EventArgs eventArgs)
         {
             _authenticatedMailboxData.Exporter = Mailbox.Exporter;
-            Mailbox.Exporter.ExportedMail += ExporterOnExportedMail;
+            Mailbox.Exporter.ProcessedMail += ExporterOnExportedMail;
             Mailbox.Exporter.StateChanged += (sender1, args) => _authenticatedMailboxData.OnPropertyChanged("ProgressText");
         }
 
@@ -46,10 +46,10 @@ namespace Zinkuba.App
 
         private void ExporterOnExportedMail(object sender, EventArgs eventArgs)
         {
-            _authenticatedMailboxData.ExportedMails = Mailbox.Exporter.ExportedMails;
+            _authenticatedMailboxData.SucceededMails = Mailbox.Exporter.SucceededMails;
             _authenticatedMailboxData.FailedMails = Mailbox.Exporter.FailedMails;
             _authenticatedMailboxData.IgnoredMails = Mailbox.Exporter.IgnoredMails;
-            _authenticatedMailboxData.Progress = (_authenticatedMailboxData.ExportedMails + _authenticatedMailboxData.FailedMails + _authenticatedMailboxData.IgnoredMails) * 100 / Mailbox.Exporter.TotalMails;
+            _authenticatedMailboxData.Progress = (Mailbox.Exporter.SucceededMails + Mailbox.Exporter.FailedMails + Mailbox.Exporter.IgnoredMails) * 100 / Mailbox.Exporter.TotalMails;
         }
 
         public bool Validate()

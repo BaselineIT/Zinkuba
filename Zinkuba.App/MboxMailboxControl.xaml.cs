@@ -46,7 +46,7 @@ namespace Zinkuba.App
         private void MailboxOnExportStarted(object sender, EventArgs eventArgs)
         {
             _dataContext.Exporter = Mailbox.Exporter;
-            Mailbox.Exporter.ExportedMail += ExporterOnExportedMail;
+            Mailbox.Exporter.SucceededMail += ExporterOnSucceededMail;
             Mailbox.Exporter.FailedMail += ExporterOnFailedMail;
             Mailbox.Exporter.IgnoredMail += ExporterOnIgnoredMail;
             Mailbox.Exporter.StateChanged += (sender1, args) => _dataContext.OnPropertyChanged("ProgressText");
@@ -64,9 +64,9 @@ namespace Zinkuba.App
             _dataContext.Progress = 0;
         }
 
-        private void ExporterOnExportedMail(object sender, EventArgs eventArgs)
+        private void ExporterOnSucceededMail(object sender, EventArgs eventArgs)
         {
-            _dataContext.ExportedMails = Mailbox.Exporter.ExportedMails;
+            _dataContext.SucceededMails = Mailbox.Exporter.SucceededMails;
             _dataContext.Progress = 0;
         }
         private void AddMboxClick(object sender, RoutedEventArgs e)

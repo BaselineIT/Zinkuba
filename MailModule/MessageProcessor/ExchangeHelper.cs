@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using log4net;
 using Microsoft.Exchange.WebServices.Data;
 using Zinkuba.MailModule.API;
@@ -254,6 +255,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                 String folderPath = (String.IsNullOrEmpty(currentFolder.FolderPath)
                     ? ""
                     : currentFolder.FolderPath + @"\") + folder.DisplayName;
+                if (currentFolder.IsPublicFolder) folderPath = Regex.Replace(folderPath, @"^Global Public Folder Root\\", @"");
                 if (skipEmpty && folder.TotalCount == 0 && folder.ChildFolderCount == 0)
                 {
                     Logger.Debug("Skipping folder " + folderPath + ", no messages, no subfolders.");
@@ -266,8 +268,11 @@ namespace Zinkuba.MailModule.MessageProcessor
                     FolderPath = folderPath,
                     MessageCount = folder.TotalCount,
                     FolderId = folder.Id,
+                    IsPublicFolder = currentFolder.IsPublicFolder
                 };
-                folderStore.Add(exchangeFolder);
+                // only add it to the list of folders if it isn't the public folder root
+                if(!currentFolder.IsPublicFolder || !String.Equals(folder.DisplayName,"Global Public Folder Root"))
+                    folderStore.Add(exchangeFolder);
                 if (exchangeFolder.Folder.ChildFolderCount > 0)
                 {
                     GetAllSubFolders(service, exchangeFolder, folderStore, skipEmpty);

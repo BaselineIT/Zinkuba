@@ -95,7 +95,14 @@ namespace Zinkuba.MailModule.MessageProcessor
                 }
                 foreach (var folderPath in folders)
                 {
+                    bool isPublicFolder = false;
                     var destinationFolder = FolderMapping.ApplyMappings(folderPath, Provider);
+                    if (IncludePublicFolders && (String.Equals(destinationFolder, PublicFolderRoot) || destinationFolder.StartsWith(PublicFolderRoot + @"\")))
+                    {
+                        isPublicFolder = true;
+                        var start = PublicFolderRoot.Length + (destinationFolder.StartsWith(PublicFolderRoot + @"\") ? 1 : 0);
+                        destinationFolder = destinationFolder.Substring(start,destinationFolder.Length - start);
+                    }
                     if (!String.IsNullOrWhiteSpace(destinationFolder))
                     {
                         try
@@ -124,10 +131,11 @@ namespace Zinkuba.MailModule.MessageProcessor
                             _mailBoxes.Add(new ImapMailbox()
                             {
                                 MappedDestination = destinationFolder,
-                                Mailbox = folder
+                                Mailbox = folder,
+                                IsPublicFolder = isPublicFolder
                             });
                             TotalMessages += !_testOnly ? messageCount : (messageCount > 20 ? 20 : messageCount);
-                            Logger.Debug("Will process " + folderPath + " => " + destinationFolder + ", " + messageCount + " messages, " + TotalMessages + " messages total so far.");
+                            Logger.Debug("Will process " + folderPath + " => " + (isPublicFolder ? "[PUBLIC FOLDER]/" : "") + destinationFolder + ", " + messageCount + " messages, " + TotalMessages + " messages total so far.");
                         }
                         catch (Exception ex)
                         {
@@ -166,6 +174,9 @@ namespace Zinkuba.MailModule.MessageProcessor
             get { return _testOnly; }
             set { _testOnly = value; }
         }
+
+        public bool IncludePublicFolders { get; set; }
+        public string PublicFolderRoot { get; set; }
 
         public event EventHandler TotalMessagesChanged;
 
@@ -219,7 +230,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                                     continue;
                                 }
                                 var message = GetImapMessage(_imapClient, folder, uid);
-                                message.Subject = Regex.Match(message.RawMessage, @"[\r\n]Subject: (.*?)[\r\n]").Groups[1].Value;
+                                message.Subject = Regex.Match(message.RawMessage, @"[\r\n]Subject:\s*(.*?)[\r\n]").Groups[1].Value;
                                 //Logger.Debug(folder + "/" + uid + "/" + subject + " " + String.Join(", ",flags));
                                 Logger.Debug("Exporting " + uid + " from " + folder + " : " + message.Subject);
                                 if (!flags.Contains(MessageFlag.Seen))
@@ -232,6 +243,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                                 }
                                 message.SourceFolder = folderPath;
                                 message.DestinationFolder = destinationFolder;
+                                message.IsPublicFolder = mailbox.IsPublicFolder;
                                 NextReader.Process(message);
                                 SucceededMessageCount++;
                                 countQueued++;

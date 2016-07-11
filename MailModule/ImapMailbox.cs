@@ -7,5 +7,6 @@ namespace Zinkuba.MailModule
     {
         internal String MappedDestination;
         internal MailboxInfo Mailbox;
+        internal bool IsPublicFolder;
     }
 }

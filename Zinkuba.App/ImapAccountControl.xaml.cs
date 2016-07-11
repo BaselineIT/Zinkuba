@@ -81,6 +81,22 @@ namespace Zinkuba.App
             return pending;
         }
 
+        private void SingleFolderChecked(object sender, RoutedEventArgs e)
+        {
+            SingleFolder.IsEnabled = SingleFolderCheckBox.IsChecked == true;
+        }
+
+        private void PublicFolderChecked(object sender, RoutedEventArgs e)
+        {
+            PFRoot.IsEnabled = PublicFolderCheckBox.IsChecked == true;
+            if (PFRoot.IsEnabled && String.IsNullOrWhiteSpace(PFRoot.Text))
+            {
+                PFRoot.Text = "Public Folders";
+            }
+        }
+
+
+
     }
 
     public class ImapAccountDataContext : INotifyPropertyChanged
@@ -89,6 +105,7 @@ namespace Zinkuba.App
         //public ObservableCollection<ImapMailbox> ImapMailboxes { get; set; }
         public AuthenticatedMailboxList Mailboxes { get; set; }
         public String LimitSingleFolder { get { return _account.LimitFolder; } set { _account.LimitFolder = value; OnPropertyChanged("LimitSingleFolder"); } }
+        public String PublicFolderRoot { get { return _account.PublicFolderRoot; } set { _account.PublicFolderRoot = value; OnPropertyChanged("PublicFolderRoot"); } }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -102,6 +119,12 @@ namespace Zinkuba.App
         {
             get { return _account.UseSsl; }
             set { _account.UseSsl = value; OnPropertyChanged("SSL"); }
+        }
+
+        public bool IncludePublicFolders
+        {
+            get { return _account.IncludePublicFolders; }
+            set { _account.IncludePublicFolders = value; OnPropertyChanged("IncludePublicFolders"); }
         }
 
         public bool Gmail

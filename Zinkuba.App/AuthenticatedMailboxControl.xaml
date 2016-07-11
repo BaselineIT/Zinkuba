@@ -18,7 +18,7 @@
             </Grid>
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock>(</TextBlock>
-                <TextBlock Foreground="Green" Text="{Binding Path=ExportedMails, FallbackValue=0}" ToolTip="Exported"></TextBlock>
+                <TextBlock Foreground="Green" Text="{Binding Path=SucceededMails, FallbackValue=0}" ToolTip="Succeeded"></TextBlock>
                 <TextBlock>/</TextBlock>
                 <TextBlock Foreground="Goldenrod" Text="{Binding Path=IgnoredMails, FallbackValue=0}" ToolTip="Ignored"></TextBlock>
                 <TextBlock>/</TextBlock>

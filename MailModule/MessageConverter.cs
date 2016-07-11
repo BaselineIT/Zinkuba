@@ -25,6 +25,7 @@ namespace Zinkuba.MailModule
             target.ReminderDueBy = source.ReminderDueBy;
             target.Sensitivity = source.Sensitivity;
             target.IsEncrypted = source.IsEncrypted;
+            target.IsPublicFolder = source.IsPublicFolder;
             foreach (var category in source.Categories)
             {
                 target.Categories.Add(category);

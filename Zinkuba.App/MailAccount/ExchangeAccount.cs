@@ -7,11 +7,15 @@ namespace Zinkuba.App.MailAccount
     {
         private readonly ObservableCollection<AuthenticatedMailbox> _mailboxes;
 
-        public ExchangeAccount() : base()
-    {
-        _mailboxes = new ObservableCollection<AuthenticatedMailbox>();
-        Mailboxes.UnderlyingCollection = _mailboxes;
-        _mailboxes.CollectionChanged += MailboxesOnCollectionChanged;
-    }
+        public ExchangeAccount()
+            : base()
+        {
+            _mailboxes = new ObservableCollection<AuthenticatedMailbox>();
+            Mailboxes.UnderlyingCollection = _mailboxes;
+            _mailboxes.CollectionChanged += MailboxesOnCollectionChanged;
+        }
+
+        public bool IncludePublicFolders { get; set; }
+
     }
 }

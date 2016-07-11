@@ -64,7 +64,7 @@ namespace Zinkuba.App
             if (_exporter == null || _exporter.Failed)
             {
                 _exporter = exporter;
-                _exporter.ExportedMail += ExporterOnExportedMail;
+                _exporter.SucceededMail += ExporterOnSucceededMail;
                 _exporter.StateChanged += (sender, args) => OnPropertyChanged("ProgressText");
                 try
                 {
@@ -77,9 +77,9 @@ namespace Zinkuba.App
             }
         }
 
-        private void ExporterOnExportedMail(object sender, EventArgs eventArgs)
+        private void ExporterOnSucceededMail(object sender, EventArgs eventArgs)
         {
-            ExportedMails = _exporter.ExportedMails;
+            ExportedMails = _exporter.SucceededMails;
             FailedMails = _exporter.FailedMails;
             IgnoredMails = _exporter.IgnoredMails;
             Progress = (ExportedMails+FailedMails+IgnoredMails) * 100 / _exporter.TotalMails;

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading;
 using log4net;
@@ -72,7 +73,7 @@ namespace Zinkuba.MailModule.MessageProcessor
 
         private String _pstName
         {
-            get { return "Zinkuba-" + (String.IsNullOrWhiteSpace(Name) ? "unknown" : Name); }
+            get { return "Zinkuba-" + Regex.Replace(String.IsNullOrWhiteSpace(Name) ? "unknown" : Name, @"[\\,]", @"_"); }
         }
 
         public PstTarget(String saveFolder)
@@ -149,11 +150,21 @@ namespace Zinkuba.MailModule.MessageProcessor
             bool noDelete = false;
             try
             {
-                ImportIntoOutlook(msg, _rootFolder.FolderPath + @"\" + msg.DestinationFolder);
-                importState.CurrentFolderProcessed++;
-                importState.Stats[msg.DestinationFolder].Count++;
-                SucceededMessageCount++;
-                //RecordImport(msg);
+                /*int rnd = Util.Instance.Random.Next(0, 10);
+                if (rnd < 3)
+                {
+                    throw new Exception("TEST");
+                } else if (rnd < 6)
+                {
+                    IgnoredMessageCount++;
+                }
+                else
+                {*/
+                    ImportIntoOutlook(msg, _rootFolder.FolderPath + (msg.IsPublicFolder ? @"\Public Folders" : "") + @"\" + msg.DestinationFolder);
+                    importState.CurrentFolderProcessed++;
+                    importState.Stats[msg.DestinationFolder].Count++;
+                    SucceededMessageCount++;
+                //}
             }
             catch (Exception ex)
             {

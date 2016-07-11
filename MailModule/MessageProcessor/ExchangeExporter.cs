@@ -42,6 +42,8 @@ namespace Zinkuba.MailModule.MessageProcessor
         }
 
         public bool TestOnly { get; set; }
+        public bool IncludePublicFolders { get; set; }
+
         public event EventHandler TotalMessagesChanged;
 
         protected virtual void OnTotalMessagesChanged()
@@ -70,6 +72,14 @@ namespace Zinkuba.MailModule.MessageProcessor
             ExchangeHelper.GetAllSubFolders(service,
                 new ExchangeFolder() { Folder = Folder.Bind(service, WellKnownFolderName.MsgFolderRoot) }, folders,
                 false);
+            if (IncludePublicFolders)
+            {
+                Logger.Debug("Including Public Folders");
+                ExchangeHelper.GetAllSubFolders(service,
+                    new ExchangeFolder() { Folder = Folder.Bind(service, WellKnownFolderName.PublicFoldersRoot), IsPublicFolder = true }, folders,
+                    false);
+            }
+
             if (_mailboxList != null)
             {
                 var newFolders = new List<ExchangeFolder>();
@@ -271,7 +281,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                                             if (!emailMessage.TryGetProperty(ItemSchema.Subject, out subject) ||
                                                 subject == null)
                                             {
-                                                 Logger.Warn("Item " + emailMessage.Id.UniqueId + " has no subject assigned, unable to determine subject.");
+                                                Logger.Warn("Item " + emailMessage.Id.UniqueId + " has no subject assigned, unable to determine subject.");
                                             }
                                             Logger.Debug("Exporting " + emailMessage.Id.UniqueId + " from " + exchangeFolder.FolderPath + " : " + subject);
                                             var flags = new Collection<MessageFlags>();
@@ -303,6 +313,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                                                 RawMessage = "",
                                                 SourceFolder = exchangeFolder.FolderPath,
                                                 DestinationFolder = exchangeFolder.MappedDestination,
+                                                IsPublicFolder = exchangeFolder.IsPublicFolder,
                                             };
                                             Object result;
                                             if (emailMessage.TryGetProperty(ItemSchema.MimeContent, out result) &&
@@ -459,5 +470,6 @@ namespace Zinkuba.MailModule.MessageProcessor
         public String FolderPath;
         public Folder Folder;
         public string MappedDestination { get; set; }
+        public bool IsPublicFolder;
     }
 }

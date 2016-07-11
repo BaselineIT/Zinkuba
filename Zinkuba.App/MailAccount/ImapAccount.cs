@@ -23,5 +23,7 @@ namespace Zinkuba.App.MailAccount
         }
 
         public bool Gmail { get; set; }
+        public string PublicFolderRoot { get; set; }
+        public bool IncludePublicFolders { get; set; }
     }
 }

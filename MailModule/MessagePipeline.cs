@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using log4net;
 using Zinkuba.MailModule.API;
 using Zinkuba.MailModule.MessageDescriptor;
@@ -22,33 +23,44 @@ namespace Zinkuba.MailModule
             private set { _state = value; OnStateChanged(); }
         }
 
-        private int _exportedMails;
+        private int _succeededMails;
         private int _failedMails;
         private int _ignoredMails;
 
-        public int ExportedMails
+        public int SucceededMails
         {
-            get { return _exportedMails; }
-            private set { _exportedMails = value; OnExportedMail(); }
+            get { return _succeededMails; }
+            private set { _succeededMails = value; OnSucceededMail(); OnProcessedMail(); }
         }
 
         public int FailedMails
         {
             get { return _failedMails; }
-            private set { _failedMails = value; OnFailedMail(); }
+            private set { _failedMails = value; OnFailedMail(); OnProcessedMail(); }
         }
 
         public int IgnoredMails
         {
             get { return _ignoredMails; }
-            private set { _ignoredMails = value; OnIgnoredMail(); }
+            private set
+            {
+                _ignoredMails = value; OnIgnoredMail(); OnProcessedMail();
+            }
         }
 
-        public event EventHandler ExportedMail;
+        public event EventHandler<EventArgs> ProcessedMail;
 
-        protected virtual void OnExportedMail()
+        protected virtual void OnProcessedMail()
         {
-            EventHandler handler = ExportedMail;
+            EventHandler<EventArgs> handler = ProcessedMail;
+            if (handler != null) handler(this, EventArgs.Empty);
+        }
+
+        public event EventHandler SucceededMail;
+
+        protected virtual void OnSucceededMail()
+        {
+            EventHandler handler = SucceededMail;
             if (handler != null) handler(this, EventArgs.Empty);
         }
 
@@ -83,9 +95,9 @@ namespace Zinkuba.MailModule
             foreach (var messageProcessor in messageProcessors)
             {
                 // Count failed messages for every processor
-                messageProcessor.FailedMessage += (sender, args) => MessageFailed(messageProcessor.FailedMessageCount);
+                messageProcessor.FailedMessage += (sender, args) => FailedMails = messageProcessors.Sum(processor => processor.FailedMessageCount);
                 // Count ignored messages for every processor
-                messageProcessor.IgnoredMessage += (sender, args) => MessageIgnored(messageProcessor.IgnoredMessageCount);
+                messageProcessor.IgnoredMessage += (sender, args) => IgnoredMails = messageProcessors.Sum(processor => processor.IgnoredMessageCount);
                 // check Status for every processor
                 messageProcessor.StatusChanged += MessageProcessorOnStatusChanged;
                 //var messageWriter = messageProcessor as IMessageWriter;
@@ -104,12 +116,12 @@ namespace Zinkuba.MailModule
                 previousWriter = messageProcessor as IMessageWriter;
             }
             // Listen on success message of last item
-            messageProcessors[messageProcessors.Count - 1].SucceededMessage += (sender, args) => MessageExported(messageProcessors[messageProcessors.Count - 1].SucceededMessageCount);
+            messageProcessors[messageProcessors.Count - 1].SucceededMessage += (sender, args) => SucceededMails = messageProcessors[messageProcessors.Count - 1].SucceededMessageCount;
             // listen on Total messages of first item
             ((IMessageSource)messageProcessors[0]).TotalMessagesChanged += OnTotalMessagesChanged;
 
             TotalMails = 0;
-            ExportedMails = 0;
+            SucceededMails = 0;
             State = MessageProcessorStatus.Idle;
         }
 
@@ -163,9 +175,9 @@ namespace Zinkuba.MailModule
 
         private void MessageExported(int exportedMails)
         {
-            ExportedMails = exportedMails;
+            SucceededMails = exportedMails;
         }
-
+        /*
         private void MessageIgnored(int ignoredMails)
         {
             IgnoredMails = ignoredMails;
@@ -175,7 +187,7 @@ namespace Zinkuba.MailModule
         {
             FailedMails = failedMails;
         }
-
+        */
         public bool Running { get { return State == MessageProcessorStatus.Started || State == MessageProcessorStatus.Initialising; } }
         public bool Failed { get { return State == MessageProcessorStatus.AuthFailure || State == MessageProcessorStatus.DestinationAuthFailure || State == MessageProcessorStatus.SourceAuthFailure || State == MessageProcessorStatus.ConnectionError || State == MessageProcessorStatus.UnknownError; } }
         public bool TestOnly { get; set; }
