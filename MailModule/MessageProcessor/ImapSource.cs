@@ -14,10 +14,10 @@ using Exception = System.Exception;
 
 namespace Zinkuba.MailModule.MessageProcessor
 {
-    public class ImapExporter : BaseMessageProcessor, IMessageWriter<RawMessageDescriptor>, IMessageSource
+    public class ImapSource : BaseMessageProcessor, IMessageWriter<RawMessageDescriptor>, IMessageSource
     {
         public IMessageReader<RawMessageDescriptor> NextReader { get; set; }
-        private static readonly ILog Logger = LogManager.GetLogger(typeof (ImapExporter));
+        private static readonly ILog Logger = LogManager.GetLogger(typeof (ImapSource));
         private ImapClient _imapClient;
         private readonly string _server;
         private readonly DateTime? _startDate;
@@ -40,7 +40,7 @@ namespace Zinkuba.MailModule.MessageProcessor
         private int _totalMessages;
         private bool _testOnly;
 
-        public ImapExporter(String username, String password, String server, DateTime startDate, DateTime endDate, bool useSSL, List<String> mailboxList)
+        public ImapSource(String username, String password, String server, DateTime startDate, DateTime endDate, bool useSSL, List<String> mailboxList)
         {
             _password = password;
             _server = server;

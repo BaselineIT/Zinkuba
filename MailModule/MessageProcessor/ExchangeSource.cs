@@ -17,9 +17,9 @@ using Folder = Microsoft.Exchange.WebServices.Data.Folder;
 
 namespace Zinkuba.MailModule.MessageProcessor
 {
-    public class ExchangeExporter : BaseMessageProcessor, IMessageWriter<RawMessageDescriptor>, IMessageSource
+    public class ExchangeSource : BaseMessageProcessor, IMessageWriter<RawMessageDescriptor>, IMessageSource
     {
-        private static readonly ILog Logger = LogManager.GetLogger(typeof(ExchangeExporter));
+        private static readonly ILog Logger = LogManager.GetLogger(typeof(ExchangeSource));
 
         private readonly string _username;
         private readonly string _password;
@@ -52,7 +52,7 @@ namespace Zinkuba.MailModule.MessageProcessor
             if (handler != null) handler(this, EventArgs.Empty);
         }
 
-        public ExchangeExporter(String username, String password, String hostname, DateTime startDate, DateTime endDate, List<String> mailboxList)
+        public ExchangeSource(String username, String password, String hostname, DateTime startDate, DateTime endDate, List<String> mailboxList)
         {
             _username = username;
             _password = password;
@@ -89,29 +89,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                     newFolders.AddRange(folders.Where(folder => folder.FolderPath.ToLower().Equals(mailboxMatch)));
                 }
                 folders = newFolders;
-            }/*
-            else
-            {
-                var view = new FolderView(Int32.MaxValue) {Traversal = FolderTraversal.Shallow};
-                foreach (var mailbox in _mailboxList)
-                {
-                    FindFoldersResults findFoldersResults = service.FindFolders(WellKnownFolderName.MsgFolderRoot, view);
-                    foreach (Folder f in findFoldersResults)
-                    {
-                        if (f.DisplayName.Equals(mailbox))
-                        {
-                            var exchangeFolder = new ExchangeFolder()
-                            {
-                                Folder = f,
-                                FolderPath = f.DisplayName,
-                                MessageCount = f.TotalCount,
-                                FolderId = f.Id,
-                            };
-                            folders.Add(exchangeFolder);
-                        }
-                    }
-                }
-            }*/
+            }
             ExchangeHelper.GetFolderSummary(service, folders, _startDate, _endDate);
             folders.ForEach(folder => TotalMessages += !TestOnly ? folder.MessageCount : (folder.MessageCount > 20 ? 20 : folder.MessageCount));
             Logger.Debug("Found " + folders.Count + " folders and " + TotalMessages + " messages.");

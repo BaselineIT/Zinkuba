@@ -67,12 +67,12 @@
     <Compile Include="MessageDescriptor\RawMessageDescriptor.cs" />
     <Compile Include="MessagePipeline.cs" />
     <Compile Include="MessageProcessor\BaseMessageProcessor.cs" />
-    <Compile Include="MessageProcessor\ExchangeExporter.cs" />
+    <Compile Include="MessageProcessor\ExchangeSource.cs" />
     <Compile Include="MessageProcessor\ExchangeHelper.cs" />
     <Compile Include="MessageProcessor\ExchangeTarget.cs" />
     <Compile Include="MessageProcessor\IMessageDestination.cs" />
     <Compile Include="MessageProcessor\MboxExporter.cs" />
-    <Compile Include="MessageProcessor\ImapExporter.cs" />
+    <Compile Include="MessageProcessor\ImapSource.cs" />
     <Compile Include="MessageProcessor\MessageProcessorException.cs" />
     <Compile Include="MessageProcessor\PstTarget.cs" />
     <Compile Include="MessageProcessor\RawToMsgProcessor.cs" />
