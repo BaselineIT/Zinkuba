@@ -6,6 +6,6 @@ namespace Zinkuba.MailModule.MessageProcessor
 {
     public interface IMessageDestination : IMessageProcessor
     {
-        List<String> ImportedIds { get; }
+        //List<String> ImportedIds { get; }
     }
 }

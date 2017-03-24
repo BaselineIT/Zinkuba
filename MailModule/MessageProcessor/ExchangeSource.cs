@@ -26,7 +26,8 @@ namespace Zinkuba.MailModule.MessageProcessor
         private readonly string _hostname;
         private readonly DateTime _startDate;
         private readonly DateTime _endDate;
-        private readonly List<string> _mailboxList;
+        private readonly List<string> _limitFolderList;
+        private readonly List<MailFolder> _mainFolderList = new List<MailFolder>(); 
         private Thread _sourceThread;
         private ExchangeService service;
         private List<ExchangeFolder> folders;
@@ -52,23 +53,23 @@ namespace Zinkuba.MailModule.MessageProcessor
             if (handler != null) handler(this, EventArgs.Empty);
         }
 
-        public ExchangeSource(String username, String password, String hostname, DateTime startDate, DateTime endDate, List<String> mailboxList)
+        public ExchangeSource(String username, String password, String hostname, DateTime startDate, DateTime endDate, List<String> limitFolderList)
         {
             _username = username;
             _password = password;
             _hostname = hostname;
             _startDate = startDate;
             _endDate = endDate;
-            _mailboxList = (mailboxList == null || mailboxList.Count == 0) ? null : mailboxList;
+            _limitFolderList = (limitFolderList == null || limitFolderList.Count == 0) ? null : limitFolderList;
             Name = username;
         }
 
-        public override void Initialise()
+        public override void Initialise(List<MailFolder> folderList)
         {
             Status = MessageProcessorStatus.Initialising;
-            NextReader.Initialise();
             service = ExchangeHelper.ExchangeConnect(_hostname, _username, _password);
             folders = new List<ExchangeFolder>();
+            // Use Exchange Helper to get all the folders for this account
             ExchangeHelper.GetAllSubFolders(service,
                 new ExchangeFolder() { Folder = Folder.Bind(service, WellKnownFolderName.MsgFolderRoot) }, folders,
                 false);
@@ -80,19 +81,36 @@ namespace Zinkuba.MailModule.MessageProcessor
                     false);
             }
 
-            if (_mailboxList != null)
+            // Are we limited folders to a specific list?
+            if (_limitFolderList != null)
             {
                 var newFolders = new List<ExchangeFolder>();
-                foreach (var mailbox in _mailboxList)
+                foreach (var mailbox in _limitFolderList)
                 {
                     var mailboxMatch = mailbox.ToLower().Replace('/', '\\'); ;
                     newFolders.AddRange(folders.Where(folder => folder.FolderPath.ToLower().Equals(mailboxMatch)));
                 }
                 folders = newFolders;
             }
+
+            // Scan the folders to get message counts
             ExchangeHelper.GetFolderSummary(service, folders, _startDate, _endDate);
             folders.ForEach(folder => TotalMessages += !TestOnly ? folder.MessageCount : (folder.MessageCount > 20 ? 20 : folder.MessageCount));
             Logger.Debug("Found " + folders.Count + " folders and " + TotalMessages + " messages.");
+
+            // Now build the folder list that we pass on to the next folders.
+            foreach (var exchangeFolder in folders)
+            {
+                var folder = new MailFolder()
+                {
+                    SourceFolder = exchangeFolder.FolderPath,
+                    DestinationFolder = exchangeFolder.MappedDestination,
+                    MessageCount = exchangeFolder.MessageCount,
+                };
+                _mainFolderList.Add(folder);
+            }
+            // Now initialise the next read, I am not going to start reading unless I know the pipeline is groovy
+            NextReader.Initialise(_mainFolderList);
             Status = MessageProcessorStatus.Initialised;
             Logger.Info("ExchangeExporter Initialised");
         }
@@ -338,10 +356,6 @@ namespace Zinkuba.MailModule.MessageProcessor
                                                 {
                                                     message.Categories.Add(category);
                                                 }
-                                            }
-                                            if (NextReader.Status == MessageProcessorStatus.Idle)
-                                            {
-                                                NextReader.Initialise();
                                             }
                                             if (emailMessage.ExtendedProperties != null)
                                             {

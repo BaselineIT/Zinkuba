@@ -34,7 +34,7 @@ namespace Zinkuba.App.Mailbox
 
         public IMessageSource GetSource()
         {
-            return new MboxExporter(Name, Folders.ToDictionary(folder => folder.MboxPath, folder => folder.FolderPath));
+            return new MboxSource(Name, Folders.ToDictionary(folder => folder.MboxPath, folder => folder.FolderPath));
         }
 
         public void StartExporter(MessagePipeline exporter)

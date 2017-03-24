@@ -212,6 +212,8 @@ namespace Zinkuba.MailModule.MessageProcessor
             return true;
         }
         */
+
+        // Get a summary of all the folders
         public static void GetFolderSummary(ExchangeService service, List<ExchangeFolder> folderStore, DateTime startDate, DateTime endDate, bool purgeIgnored = true)
         {
             SearchFilter.SearchFilterCollection filter = new SearchFilter.SearchFilterCollection();

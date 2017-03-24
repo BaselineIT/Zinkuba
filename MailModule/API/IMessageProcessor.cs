@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Zinkuba.MailModule.API
 {
@@ -18,7 +19,7 @@ namespace Zinkuba.MailModule.API
         int FailedMessageCount { get; }
         int IgnoredMessageCount { get; }
         MessageProcessorStatus Status { get; }
-        void Initialise();
+        void Initialise(List<MailFolder> folderList);
         void Close();
         bool Closed { get; }
         bool Running { get; }

@@ -23,7 +23,7 @@ namespace Zinkuba.MailModule.MessageProcessor
         private readonly DateTime? _startDate;
         private readonly DateTime? _endDate;
         private readonly bool _useSsl;
-        private readonly List<string> _mailboxList;
+        private readonly List<string> _limitFolderList;
         private readonly string _username;
         private readonly string _password;
         public MailProvider Provider = MailProvider.DefaultImap;
@@ -36,11 +36,12 @@ namespace Zinkuba.MailModule.MessageProcessor
             private set { _totalMessages = value; OnTotalMesssagesChanged(); }
         }
 
-        private List<ImapMailbox> _mailBoxes;
+        private List<ImapFolder> _folders;
         private int _totalMessages;
         private bool _testOnly;
+        private List<MailFolder> _mainFolderList = new List<MailFolder>();
 
-        public ImapSource(String username, String password, String server, DateTime startDate, DateTime endDate, bool useSSL, List<String> mailboxList)
+        public ImapSource(String username, String password, String server, DateTime startDate, DateTime endDate, bool useSSL, List<String> limitFolderList)
         {
             _password = password;
             _server = server;
@@ -48,7 +49,7 @@ namespace Zinkuba.MailModule.MessageProcessor
             _endDate = endDate;
             _username = username;
             _useSsl = useSSL;
-            _mailboxList = mailboxList;
+            _limitFolderList = limitFolderList;
             Name = username;
         }
 
@@ -57,11 +58,10 @@ namespace Zinkuba.MailModule.MessageProcessor
             return typeof(RawMessageDescriptor);
         }
 
-        public override void Initialise()
+        public override void Initialise(List<MailFolder> folderList)
         {
             Status = MessageProcessorStatus.Initialising;
-            NextReader.Initialise();
-            _mailBoxes = new List<ImapMailbox>();
+            _folders = new List<ImapFolder>();
             try
             {
                 _imapClient = new ImapClient(_server, _useSsl ? 993 : 143, _username, _password, AuthMethod.Login, _useSsl,
@@ -83,10 +83,11 @@ namespace Zinkuba.MailModule.MessageProcessor
                     }
                     Logger.Debug("Only getting messages " + _searchCondition);
                 }
-                if (_mailboxList != null)
+                // Are we limiting the folder list?
+                if (_limitFolderList != null)
                 {
                     var newFolders = new List<String>();
-                    foreach (var mailbox in _mailboxList)
+                    foreach (var mailbox in _limitFolderList)
                     {
                         var mailboxMatch = mailbox.ToLower().Replace('\\', '/'); ;
                         newFolders.AddRange(folders.Where(folder => folder.ToLower().Equals(mailboxMatch)));
@@ -105,6 +106,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                     }
                     if (!String.IsNullOrWhiteSpace(destinationFolder))
                     {
+
                         try
                         {
                             var folder = _imapClient.GetMailboxInfo(folderPath);
@@ -123,15 +125,22 @@ namespace Zinkuba.MailModule.MessageProcessor
                             {
                                 messageCount = folder.Messages;
                             }
+                            // Add it to our main folder list
+                            _mainFolderList.Add(new MailFolder()
+                            {
+                                DestinationFolder = destinationFolder,
+                                MessageCount = FailedMessageCount,
+                                SourceFolder = folderPath
+                            }); 
                             if (messageCount == 0)
                             {
                                 Logger.Debug("Skipping folder " + folderPath + ", no messages within criteria.");
                                 continue;
                             }
-                            _mailBoxes.Add(new ImapMailbox()
+                            _folders.Add(new ImapFolder()
                             {
                                 MappedDestination = destinationFolder,
-                                Mailbox = folder,
+                                FolderPath = folder,
                                 IsPublicFolder = isPublicFolder
                             });
                             TotalMessages += !_testOnly ? messageCount : (messageCount > 20 ? 20 : messageCount);
@@ -159,6 +168,7 @@ namespace Zinkuba.MailModule.MessageProcessor
                 throw new MessageProcessorException("Imap Runner for " + _username + " [********] to " + _server + " failed : " + ex.Message) 
                 { Status = MessageProcessorStatus.ConnectionError };
             }
+            NextReader.Initialise(_mainFolderList);
             Status = MessageProcessorStatus.Initialised;
             Logger.Info("ExchangeExporter Initialised");
         }
@@ -191,14 +201,14 @@ namespace Zinkuba.MailModule.MessageProcessor
             try
             {
                 Status = MessageProcessorStatus.Started;
-                foreach (var mailbox in _mailBoxes)
+                foreach (var mailbox in _folders)
                 {
                     if (Closed)
                     {
                         Logger.Warn("Cancellation requested");
                         break;
                     }
-                    var folder = mailbox.Mailbox;
+                    var folder = mailbox.FolderPath;
                     var folderPath = folder.Name;
                     var destinationFolder = mailbox.MappedDestination;
                     try

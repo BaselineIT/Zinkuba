@@ -10,12 +10,14 @@ namespace Zinkuba.App
     /// </summary>
     public partial class PstDestinationControl : UserControl, IDestinationManager
     {
+        private readonly MainWindow _mainWindow;
         private Dictionary<string, PstTarget> _destinations;
         private readonly object _destinationLock = new object();
 
 
-        public PstDestinationControl()
+        public PstDestinationControl(MainWindow mainWindow)
         {
+            _mainWindow = mainWindow;
             InitializeComponent();
             SaveFolder.Text = Environment.ExpandEnvironmentVariables(@"%USERPROFILE%\Downloads");
             _destinations = new Dictionary<String,PstTarget>();
@@ -23,8 +25,8 @@ namespace Zinkuba.App
 
         public IMessageDestination GetDestination(String id)
         {
-            // we don't care about the id, we are id dependant
-            return new PstTarget(SaveFolder.Text);
+            // we don't care about the id, we are id independant
+            return new PstTarget(SaveFolder.Text,_mainWindow.EmptyFolderCheckBox.IsChecked == true);
         }
 
         public void AddDestination(string id)

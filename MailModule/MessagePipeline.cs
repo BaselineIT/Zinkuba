@@ -197,7 +197,8 @@ namespace Zinkuba.MailModule
             State = MessageProcessorStatus.Idle;
             try
             {
-                _messageProcessors[0].Initialise();
+                // we initialise with a null list (they must build the source list)
+                _messageProcessors[0].Initialise(null);
             }
             catch (MessageProcessorException ex)
             {

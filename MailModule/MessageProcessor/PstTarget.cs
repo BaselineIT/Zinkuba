@@ -16,6 +16,7 @@ namespace Zinkuba.MailModule.MessageProcessor
     public class PstTarget : BaseMessageProcessor, IMessageReader<MsgDescriptor>, IMessageDestination
     {
         private readonly string _saveFolder;
+        private readonly bool _createAllFolders;
         private static readonly ILog Logger = LogManager.GetLogger(typeof(PstTarget));
         //public String PstPath;
         private Application _outlook;
@@ -24,61 +25,17 @@ namespace Zinkuba.MailModule.MessageProcessor
         private ImportState _lastState;
         //private QueuedMessageReader<MsgDescriptor, ImportState> _queue;
         private PCQueue<MsgDescriptor, ImportState> _queue;
-        private Folder _importFolder;
-        private MailItem _importIdsMsg;
-
-        private MailItem ImportIdsMsg
-        {
-            get
-            {
-                if (_importIdsMsg == null)
-                {
-                    var searchResults = _importFolder.Items.OfType<MailItem>().Where(m => m.Subject == "ImportIds").Select(m => m);
-                    if (searchResults.Any())
-                    {
-                        Logger.Debug("Found import id store, retrieving");
-                        _importIdsMsg = searchResults.First();
-                    }
-                    else
-                    {
-                        Logger.Debug("Creating import id store");
-                        _importIdsMsg = _importFolder.Items.Add(OlItemType.olMailItem);
-                        _importIdsMsg.Subject = "ImportIds";
-                    }
-                }
-                return _importIdsMsg;
-            }
-        }
-
-        public List<String> ImportedIds
-        {
-            get
-            {
-                if (Status == MessageProcessorStatus.Idle)
-                {
-                    Initialise();
-                }
-                try
-                {
-                    var ids = ImportIdsMsg.Body.Split(new char[] { '\n' }).Where(s => !s.StartsWith("#")).ToList();
-                    return ids;
-                }
-                catch (Exception e)
-                {
-                    Logger.Error("Failed to get importIds", e);
-                    throw;
-                }
-            }
-        }
+        //private Folder _importFolder;
 
         private String _pstName
         {
             get { return "Zinkuba-" + Regex.Replace(String.IsNullOrWhiteSpace(Name) ? "unknown" : Name, @"[\\,]", @"_"); }
         }
 
-        public PstTarget(String saveFolder)
+        public PstTarget(String saveFolder, bool createAllFolders)
         {
             _saveFolder = saveFolder;
+            _createAllFolders = createAllFolders;
         }
 
         public void Process(MsgDescriptor message)
@@ -103,7 +60,7 @@ namespace Zinkuba.MailModule.MessageProcessor
 
         #region Queue Methods (Start, Process, Stop)
 
-        public override void Initialise()
+        public override void Initialise(List<MailFolder> folderList)
         {
             Status = MessageProcessorStatus.Initialising;
             _outlook = new Application();
@@ -111,7 +68,14 @@ namespace Zinkuba.MailModule.MessageProcessor
             Logger.Info("Writing to PST " + pstPath);
             _pstHandle = PstHandle(_outlook.GetNamespace("MAPI"), pstPath, _pstName);
             _rootFolder = _pstHandle.GetRootFolder() as Folder;
-            _importFolder = GetCreateFolder(_rootFolder.FolderPath + @"\_zinkuba_import", _outlook);
+            //_importFolder = GetCreateFolder(_rootFolder.FolderPath + @"\_zinkuba_import", _outlook);
+            if (_createAllFolders)
+            {
+                foreach (var mailFolder in folderList)
+                {
+                    GetCreateFolder(_rootFolder.FolderPath + @"\" + mailFolder.DestinationFolder, _outlook, true);
+                }
+            }
             _lastState = new ImportState();
             _queue = new PCQueue<MsgDescriptor, ImportState>(Name + "-pstTarget")
             {
@@ -190,22 +154,6 @@ namespace Zinkuba.MailModule.MessageProcessor
             }
             _lastState = importState;
             return importState;
-        }
-
-        private void RecordImport(MsgDescriptor msg)
-        {
-            if (!String.IsNullOrEmpty(msg.SourceId))
-            {
-                try
-                {
-                    ImportIdsMsg.Body += msg.SourceId + "\n";
-                    ImportIdsMsg.Save();
-                }
-                catch (Exception e)
-                {
-                    Logger.Error("Failed to record successful import of " + msg.SourceId + " : " + e.Message);
-                }
-            }
         }
 
         private void ShutdownQueue(ImportState state, Exception ex)
@@ -340,7 +288,7 @@ namespace Zinkuba.MailModule.MessageProcessor
             }
         }
 
-        private Folder GetCreateFolder(string folderPath, Application app)
+        private Folder GetCreateFolder(string folderPath, Application app, bool noWait = false)
         {
             Folder folder;
             string backslash = @"\";
@@ -378,7 +326,8 @@ namespace Zinkuba.MailModule.MessageProcessor
                         {
                             Logger.Debug("Creating folder " + folders[i] + " for " + "'" + folderPath + "'");
                             subFolders.Add(folders[i], Type.Missing);
-                            Thread.Sleep(2000);
+                            // Don't want to always wait
+                            if(!noWait) Thread.Sleep(2000);
                             folder = subFolders[folders[i]] as Folder;
                             Logger.Debug("Created folder " + folders[i] + " for " + "'" + folderPath + "'");
                         }

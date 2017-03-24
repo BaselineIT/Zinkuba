@@ -35,14 +35,14 @@ namespace Zinkuba.App.Mailbox
         public IMessageSource GetSource()
         {
             if (_account is ExchangeAccount)
-                return new ExchangeExporter(Username, Password, _account.Server, _account.StartDate,
+                return new ExchangeSource(Username, Password, _account.Server, _account.StartDate,
                     _account.EndDate.AddDays(1),
                     String.IsNullOrWhiteSpace(_account.LimitFolder) ? null : new List<string>() {_account.LimitFolder})
                 {
                     IncludePublicFolders = ((ExchangeAccount) _account).IncludePublicFolders
                 };
             if (_account is ImapAccount)
-                return new ImapExporter(Username, Password, _account.Server, _account.StartDate, _account.EndDate.AddDays(1), ((ImapAccount)_account).UseSsl, String.IsNullOrWhiteSpace(_account.LimitFolder) ? null : new List<string>() { _account.LimitFolder })
+                return new ImapSource(Username, Password, _account.Server, _account.StartDate, _account.EndDate.AddDays(1), ((ImapAccount)_account).UseSsl, String.IsNullOrWhiteSpace(_account.LimitFolder) ? null : new List<string>() { _account.LimitFolder })
                 {
                     Provider = ((ImapAccount)_account).Gmail ? MailProvider.GmailImap : MailProvider.DefaultImap,
                     PublicFolderRoot = ((ImapAccount)_account).IncludePublicFolders ? ((ImapAccount)_account).PublicFolderRoot : "",

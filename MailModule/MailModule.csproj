@@ -56,8 +56,9 @@
     <Compile Include="API\IMessageReader.cs" />
     <Compile Include="API\IMessageSource.cs" />
     <Compile Include="API\IMessageWriter.cs" />
+    <Compile Include="MailFolder.cs" />
     <Compile Include="FolderMapping.cs" />
-    <Compile Include="ImapMailbox.cs" />
+    <Compile Include="ImapFolder.cs" />
     <Compile Include="ImportState.cs" />
     <Compile Include="MessageConverter.cs" />
     <Compile Include="MessageDescriptor\EmlMessageDescriptor.cs" />
@@ -71,7 +72,7 @@
     <Compile Include="MessageProcessor\ExchangeHelper.cs" />
     <Compile Include="MessageProcessor\ExchangeTarget.cs" />
     <Compile Include="MessageProcessor\IMessageDestination.cs" />
-    <Compile Include="MessageProcessor\MboxExporter.cs" />
+    <Compile Include="MessageProcessor\MboxSource.cs" />
     <Compile Include="MessageProcessor\ImapSource.cs" />
     <Compile Include="MessageProcessor\MessageProcessorException.cs" />
     <Compile Include="MessageProcessor\PstTarget.cs" />

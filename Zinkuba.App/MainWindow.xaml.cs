@@ -286,7 +286,7 @@ namespace Zinkuba.App
                 {
                     if (_exchangeDestinationControl == null)
                     {
-                        _exchangeDestinationControl = new ExchangeDestinationControl();
+                        _exchangeDestinationControl = new ExchangeDestinationControl(this);
                     }
                     MailDestination.Content = _exchangeDestinationControl;
                 }
@@ -294,7 +294,7 @@ namespace Zinkuba.App
                 {
                     if (_pstDestinationControl == null)
                     {
-                        _pstDestinationControl = new PstDestinationControl();
+                        _pstDestinationControl = new PstDestinationControl(this);
                     }
                     MailDestination.Content = _pstDestinationControl;
                 }

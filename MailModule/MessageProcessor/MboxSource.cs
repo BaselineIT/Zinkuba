@@ -11,11 +11,11 @@ using Exception = System.Exception;
 
 namespace Zinkuba.MailModule.MessageProcessor
 {
-    public class MboxExporter : BaseMessageProcessor, IMessageWriter<RawMessageDescriptor>, IMessageSource
+    public class MboxSource : BaseMessageProcessor, IMessageWriter<RawMessageDescriptor>, IMessageSource
     {
         private readonly Dictionary<string, string> _folderMap;
         private IMessageReader<RawMessageDescriptor> _nextReader;
-        private static readonly ILog Logger = LogManager.GetLogger(typeof(MboxExporter));
+        private static readonly ILog Logger = LogManager.GetLogger(typeof(MboxSource));
 
         public IMessageReader<RawMessageDescriptor> NextReader
         {
@@ -39,14 +39,15 @@ namespace Zinkuba.MailModule.MessageProcessor
         private int _totalMessages;
         private int _nextUid;
         private StringBuilder _messageBuffer;
+        private List<MailFolder> _mainFolderList = new List<MailFolder>();
 
-        public MboxExporter(String name, Dictionary<String,String> folderMap)
+        public MboxSource(String name, Dictionary<String,String> folderMap)
         {
             _folderMap = folderMap;
             Name = name;
         }
 
-        public override void Initialise()
+        public override void Initialise(List<MailFolder> folderList)
         {
             Status = MessageProcessorStatus.Initialising;
             /*
@@ -61,12 +62,22 @@ namespace Zinkuba.MailModule.MessageProcessor
                 throw ex;
             }
              */
+            // Build the folder list
+            foreach (var folderMap in _folderMap)
+            {
+                _mainFolderList.Add(new MailFolder()
+                {
+                    DestinationFolder = folderMap.Value,
+                    SourceFolder = folderMap.Value,
+                });
+            }
+            NextReader.Initialise(_mainFolderList);
             Status = MessageProcessorStatus.Initialised;
         }
 
         public void Start()
         {
-            Initialise();
+            //Initialise(null);
             _sourceThread = new Thread(RunMboxReader) { IsBackground = true, Name = "sourceThread-" + Name };
             _sourceThread.Start();
         }

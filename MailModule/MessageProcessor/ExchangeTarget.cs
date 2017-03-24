@@ -31,15 +31,18 @@ namespace Zinkuba.MailModule.MessageProcessor
         private ImportState _lastState;
         private ExchangeService service;
         private List<ExchangeFolder> folders;
+        private List<MailFolder> _mainFolderList = new List<MailFolder>(); 
         private readonly object _folderCreationLock = new object();
         private readonly SmartThreadPool pool;
         private String previousFolder;
         private List<ExchangeItemContainer> itemBuffer;
         private int bufferedSize;
+        private bool _createAllFolders;
 
 
-        public ExchangeTarget(string hostname, string username, string password)
+        public ExchangeTarget(string hostname, string username, string password, bool createAllFolders)
         {
+            _createAllFolders = createAllFolders;
             _hostname = hostname;
             _username = username;
             _password = password;
@@ -67,14 +70,23 @@ namespace Zinkuba.MailModule.MessageProcessor
 
         }
 
-        public override void Initialise()
+        public override void Initialise(List<MailFolder> folderList)
         {
             Status = MessageProcessorStatus.Initialising;
+            _mainFolderList = folderList;
             service = ExchangeHelper.ExchangeConnect(_hostname, _username, _password);
             //service.TraceEnabled = true;
             //service.TraceFlags = TraceFlags.All;
             folders = new List<ExchangeFolder>();
             ExchangeHelper.GetAllSubFolders(service, new ExchangeFolder { Folder = Folder.Bind(service, WellKnownFolderName.MsgFolderRoot) }, folders, false);
+            if (_createAllFolders)
+            {
+                // we need to create all folders which don't exist
+                foreach (var mailFolder in _mainFolderList)
+                {
+                    GetCreateFolder(mailFolder.DestinationFolder);
+                }
+            }
             _lastState = new ImportState();
             _queue = new PCQueue<RawMessageDescriptor, ImportState>(Name + "-exchangeTarget")
             {
@@ -562,7 +574,7 @@ namespace Zinkuba.MailModule.MessageProcessor
             return item;
         }
 
-        private FolderId GetCreateFolder(string destinationFolder)
+        private FolderId GetCreateFolder(string destinationFolder, bool secondAttempt = false)
         {
             lock (_folderCreationLock)
             {
@@ -585,7 +597,25 @@ namespace Zinkuba.MailModule.MessageProcessor
                     Logger.Debug("Folder " + destinationFolder + " doesn't exist, creating.");
                     var destinationFolderName = Regex.Replace(destinationFolder, @"^.*\\", "");
                     Folder folder = new Folder(service) { DisplayName = destinationFolderName };
-                    folder.Save(parentFolderId);
+                    try
+                    {
+                        folder.Save(parentFolderId);
+                    }
+                    catch (Exception e)
+                    {
+                        // If the folder exists, we need to refresh and have another crack
+                        if (e.Message.Equals("A folder with the specified name already exists.") && !secondAttempt)
+                        {
+                            Logger.Warn("Looks like the folder "+ destinationFolder + " was created under our feet, refreshing the folder list. We will only attempt this once per folder.");
+                            // Oops, the folders have been updated on the server, we need a refresh
+                            var newFolders = new List<ExchangeFolder>();
+                            ExchangeHelper.GetAllSubFolders(service, new ExchangeFolder { Folder = Folder.Bind(service, WellKnownFolderName.MsgFolderRoot) }, newFolders, false);
+                            folders = newFolders;
+                            // lets try again
+                            return GetCreateFolder(destinationFolder, true);
+                        }
+                        throw e;
+                    }
                     folders.Add(new ExchangeFolder()
                     {
                         Folder = folder,

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
@@ -132,10 +133,10 @@ namespace Zinkuba.MailModule.MessageProcessor
             }
         }
 
-        public override void Initialise()
+        public override void Initialise(List<MailFolder> folderList)
         {
             Status = MessageProcessorStatus.Initialising;
-            NextReader.Initialise();
+            NextReader.Initialise(folderList);
             _lastState = new MessageProcessState();
             _queue = new PCQueue<RawMessageDescriptor, MessageProcessState>(Name)
             {
@@ -178,10 +179,12 @@ namespace Zinkuba.MailModule.MessageProcessor
             state.CurrentFolderConsumed++;
             try
             {
+                /* This is now initialised in the initialise method
                 if (_nextReader.Status == MessageProcessorStatus.Idle)
                 {
                     _nextReader.Initialise();
                 }
+                 */
                 _nextReader.Process(ConvertRawToMsg(message));
                 state.CurrentFolderProcessed++;
                 SucceededMessageCount++;

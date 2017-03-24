@@ -24,12 +24,14 @@ namespace Zinkuba.App
     /// </summary>
     public partial class ExchangeDestinationControl : UserControl, IDestinationManager
     {
+        private readonly MainWindow _mainWindow;
         private Dictionary<string, AuthenticatedMailboxTargetControl> _destinations;
         private readonly object _destinationLock = new object();
         private ExchangeDestinationDataContext dataContext;
 
-        public ExchangeDestinationControl()
+        public ExchangeDestinationControl(MainWindow mainWindow)
         {
+            _mainWindow = mainWindow;
             InitializeComponent();
             _destinations = new Dictionary<String, AuthenticatedMailboxTargetControl>();
             dataContext = new ExchangeDestinationDataContext();
@@ -42,7 +44,8 @@ namespace Zinkuba.App
             {
                 if (_destinations.ContainsKey(id))
                 {
-                    var target = new ExchangeTarget(dataContext.Server,_destinations[id].AuthenticatedMailboxData.Username, _destinations[id].AuthenticatedMailboxData.Password);
+                    var target = new ExchangeTarget(dataContext.Server,_destinations[id].AuthenticatedMailboxData.Username, _destinations[id].AuthenticatedMailboxData.Password 
+                        ,_mainWindow.EmptyFolderCheckBox.IsChecked == true);
                     return target;
                 }
             }
