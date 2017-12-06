@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Xml;
 using log4net;
 using Microsoft.Exchange.WebServices.Data;
 using Microsoft.Office.Interop.Outlook;
@@ -187,88 +188,13 @@ namespace Zinkuba.MailModule.MessageProcessor
                     Boolean more = true;
                     while (more)
                     {
-                        emails.Clear();
                         try
                         {
-                            FindItemsResults<Item> findResults = null;
-                            bool firstAttempt = true;
-                            bool success = false;
-                            do
-                            {
-                                try
-                                {
-                                    findResults = exchangeFolder.Folder.FindItems(filter, view);
-                                    success = true;
-                                }
-                                catch (Exception ex)
-                                {
-                                    // this is normally a timeout exception, so lets try again
-                                    if (firstAttempt)
-                                    {
-                                        Logger.Warn("Error accessing Exchange Webservice for emails, will attempt again : " +
-                                                    ex.Message);
-                                        firstAttempt = false;
-                                    }
-                                    else
-                                    {
-                                        throw ex;
-                                    }
-                                }
-                            } while (!success);
-                            Logger.Debug("Got list of " + findResults.Items.Count + "/" + (findResults.TotalCount - view.Offset) + " messageIds from " + exchangeFolder.FolderPath);
-                            foreach (var item in findResults)
-                            {
-                                if (item is EmailMessage)
-                                {
-                                    try
-                                    {
-                                        emails.Add((EmailMessage)item);
-                                        if (TestOnly && emails.Count > 20)
-                                        {
-                                            break;
-                                        }
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        FailedMessageCount++;
-                                        Logger.Error("Failed to extract email message from results : " + e.Message, e);
-                                    }
-                                }
-                                else
-                                {
-                                    Logger.Warn("Will not export message, item is not a mail message [" + item.GetType() + "]");
-                                    IgnoredMessageCount++;
-                                }
-                            }
+                            more = FindExchangeMessages(exchangeFolder, filter, view, emails, fullPropertySet);
                             if (emails.Count > 0)
                             {
                                 try
                                 {
-                                    Logger.Debug("Retrieving " + emails.Count + " emails properties from " + exchangeFolder.FolderPath);
-                                    firstAttempt = true;
-                                    success = false;
-                                    do
-                                    {
-                                        try
-                                        {
-                                            service.LoadPropertiesForItems(emails, fullPropertySet);
-                                            success = true;
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            // this is normally a timeout exception, so lets try again
-                                            if (firstAttempt)
-                                            {
-                                                Logger.Warn("Error accessing Exchange Webservice for email properties, will attempt again : " +
-                                                            ex.Message);
-                                                firstAttempt = false;
-                                            }
-                                            else
-                                            {
-                                                throw ex;
-                                            }
-                                        }
-                                    } while (!success);
                                     foreach (var emailMessage in emails)
                                     {
                                         try
@@ -389,7 +315,6 @@ namespace Zinkuba.MailModule.MessageProcessor
                                 }
                                 ProcessedMessageCount += emails.Count;
                             }
-                            more = findResults.MoreAvailable && !TestOnly;
                             if (more)
                             {
                                 view.Offset += _pageSize;
@@ -412,6 +337,97 @@ namespace Zinkuba.MailModule.MessageProcessor
             {
                 Close();
             }
+        }
+
+        private bool FindExchangeMessages(ExchangeFolder exchangeFolder, SearchFilter.SearchFilterCollection filter, ItemView view, List<EmailMessage> emails, PropertySet fullPropertySet)
+        {
+            int majorFailureCount = 0;
+            int tryCount = 0;
+            do
+            {
+                emails.Clear();
+                tryCount++;
+                var start = Environment.TickCount;
+                try
+                {
+                    Logger.Debug("Retrieving next email messages from " + exchangeFolder.FolderPath);
+                    // Get results
+                    FindItemsResults<Item> findResults = exchangeFolder.Folder.FindItems(filter, view);
+                    // Filter out non mail items
+                    foreach (var item in findResults)
+                    {
+                        if (item is EmailMessage)
+                        {
+                            try
+                            {
+                                emails.Add((EmailMessage) item);
+                                if (TestOnly && emails.Count > 20)
+                                {
+                                    break;
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                FailedMessageCount++;
+                                Logger.Error("Failed to extract email message from results, skipping : " + e.Message, e);
+                            }
+                        }
+                        else
+                        {
+                            Logger.Warn("Will not export message, item is not a mail message [" + item.GetType() + "]");
+                            IgnoredMessageCount++;
+                        }
+                    }
+                    if (emails.Count > 0)
+                    {
+                        // Load properties for our final list of mails
+                        Logger.Debug("Retrieving " + emails.Count + " emails properties from " +
+                                     exchangeFolder.FolderPath);
+                        service.LoadPropertiesForItems(emails, fullPropertySet);
+                    }
+                    Logger.Debug("Retrieved " + emails.Count + " messages from " + exchangeFolder.FolderPath + " in " + (Environment.TickCount - start) + "ms, trying " + tryCount + " times. " + (findResults.MoreAvailable ? "More" : "No more") + " messages in folder available.");
+                    return findResults.MoreAvailable && !TestOnly;
+                }
+                catch (ServerBusyException e)
+                {
+                    Logger.Warn(
+                        "Received Server Busy Response (ServerBusyException), will back off and try again after (30s) : " +
+                        e.Message);
+                    Thread.Sleep(30000);
+                }
+                catch (XmlException e)
+                {
+                    Logger.Error("XML Response invalid (XmlException), will attempt again : " +
+                                e.Message);
+                    Thread.Sleep(1000);
+                }
+                catch (TimeoutException e)
+                {
+                    Logger.Error("Request timed out with TimeoutException, will back off and try again after (30s) : " +
+                                e.Message);
+                    Thread.Sleep(30000);
+                }
+                catch (ServiceRequestException e)
+                {
+                    Logger.Error(
+                        "Service request failed with ServiceRequestException, this may not be a permanent error, will back off and try again after (30s) : " +
+                        e.Message);
+             
+                Thread.Sleep(30000);
+                } catch (Exception e)
+                {
+                    majorFailureCount++;
+                    if (majorFailureCount >= 10)
+                    {
+                        throw e;
+                    }
+                    else
+                    {
+                        Logger.Error("Failed to get emails/properties, will attempt " + (10 - majorFailureCount) + " more times after 30s pause.",e);
+                        Thread.Sleep(30000);
+                    }
+                }
+            } while(true);
         }
 
 
